@@ -26,6 +26,8 @@ func (handler *handler) ConfigureRelease(request *common.ConfigureReleaseRequest
 		fmt.Fprintln(errorStream, "cdflow.yaml: config.default_region is required")
 		response.Success = false
 		return nil
+	} else {
+		response.Env["AWS_DEFAULT_REGION"] = region
 	}
 
 	if request.Env["AWS_ACCESS_KEY_ID"] == "" || request.Env["AWS_SECRET_ACCESS_KEY"] == "" {

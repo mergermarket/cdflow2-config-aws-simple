@@ -57,6 +57,9 @@ func TestConfigureRelease(t *testing.T) {
 		log.Fatalln("unexpected error in configure release")
 	}
 
+	if response.Env["AWS_DEFAULT_REGION"] != "test-region" {
+		log.Fatalln("AWS_DEFAULT_REGION not passed through, got:", response.Env["AWS_DEFAULT_REGION"])
+	}
 	if response.Env["AWS_ACCESS_KEY_ID"] != "foo" {
 		log.Fatalln("AWS_ACCESS_KEY_ID not passed through, got:", response.Env["AWS_ACCESS_KEY_ID"])
 	}
