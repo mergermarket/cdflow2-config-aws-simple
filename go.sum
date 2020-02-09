@@ -1,2 +1,14 @@
+github.com/aws/aws-sdk-go v1.25.26 h1:hMrxW3feteaGcP32oKaFdCQsCEWYf9zF12g73C0AcbI=
 github.com/aws/aws-sdk-go v1.25.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
+github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
+github.com/mergermarket/cdflow2-config-common v0.1.0 h1:0EgF9N3qDiBVt5ExbL3TPPtjRmW6smMPkNPT5Ez+yNY=
+github.com/mergermarket/cdflow2-config-common v0.1.0/go.mod h1:kNBuyxspdu5cWP5e7VAmrP+5elB2wP5pHlcvLLpiyzI=
+github.com/mergermarket/cdflow2-config-common v0.2.0 h1:oslzc8LjNQKEWcBWZupq5AL/RuOXF1PQ2i85aje3yP4=
+github.com/mergermarket/cdflow2-config-common v0.2.0/go.mod h1:kNBuyxspdu5cWP5e7VAmrP+5elB2wP5pHlcvLLpiyzI=
+github.com/mergermarket/cdflow2-config-common v0.3.0 h1:3Y2EHDHT8GtxTHEcSPyczARCaTiXG7HVVopsEDGn36w=
+github.com/mergermarket/cdflow2-config-common v0.3.0/go.mod h1:kNBuyxspdu5cWP5e7VAmrP+5elB2wP5pHlcvLLpiyzI=
+github.com/mergermarket/cdflow2-config-common v0.4.0 h1:+QbDOsE70uOAUz1/T7fybSuQLfg15FVl8geJVZhiEhc=
+github.com/mergermarket/cdflow2-config-common v0.4.0/go.mod h1:kNBuyxspdu5cWP5e7VAmrP+5elB2wP5pHlcvLLpiyzI=
+github.com/mergermarket/cdflow2-config-common v0.5.0 h1:WfgZgdvfEEOofBpbNab6cOXqmOjuyALVfzaI2FGYQfY=
+github.com/mergermarket/cdflow2-config-common v0.5.0/go.mod h1:kNBuyxspdu5cWP5e7VAmrP+5elB2wP5pHlcvLLpiyzI=

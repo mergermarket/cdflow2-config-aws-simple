@@ -2,4 +2,4 @@
 
 set -e
 
-go test ./...
+go test -v github.com/mergermarket/cdflow2-config-simple-aws/handler
