@@ -9,7 +9,8 @@ import (
 )
 
 type handler struct {
-	s3 s3iface.S3API
+	s3            s3iface.S3API
+	releaseBucket string
 }
 
 // New returns a new handler.
@@ -42,17 +43,35 @@ func handleAWSCredentials(inputEnv map[string]string, outputEnv map[string]strin
 	return true
 }
 
+func (handler *handler) handleReleaseBucket(config map[string]interface{}, errorStream io.Writer) (bool, error) {
+	bucket, _ := config["release_bucket"].(string)
+	if bucket != "" {
+		handler.releaseBucket = bucket
+		return true, nil
+	}
+	fmt.Fprintln(errorStream, "cdflow.yaml: config.release_bucket is required")
+	// TODO check if there are buckets prefixed with "cdflow2-release-" and if so give instructions for adding the config
+	// TODO otherwise give a command to create a versioned s3 bucket in the right region with the "cdflow2-release-" prefix.
+	// TODO consider automatically using a bucket with the right prefix if one and only one is found
+	return false, nil
+}
+
 func (handler *handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse, errorStream io.Writer) error {
 	if !handleDefaultRegion(request.Config, response.Env, errorStream) {
 		response.Success = false
 		return nil
 	}
-
 	if !handleAWSCredentials(request.Env, response.Env, errorStream) {
 		response.Success = false
 		return nil
 	}
-
+	ok, err := handler.handleReleaseBucket(request.Config, errorStream)
+	if err != nil {
+		return err
+	} else if !ok {
+		response.Success = false
+		return nil
+	}
 	return nil
 }
 
