@@ -1,86 +1,200 @@
 package handler
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
+	"math/big"
+	"math/rand"
+	"os"
+	"strings"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/logrusorgru/aurora"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
 
-type handler struct {
-	s3            s3iface.S3API
-	releaseBucket string
+type styles struct {
+	au           aurora.Aurora
+	tick         string
+	cross        string
+	warningCross string
+}
+
+func initStyles() *styles {
+	au := aurora.NewAurora(true)
+	result := styles{
+		au:           au,
+		cross:        fmt.Sprintf("%s", au.Red("✖")),
+		warningCross: fmt.Sprintf("%s", au.Yellow("✖")),
+		tick:         fmt.Sprintf("%s", au.Green("✔")),
+	}
+	return &result
+}
+
+// Handler handles config requests.
+type Handler struct {
+	s3Client       s3iface.S3API
+	dynamoDBClient dynamodbiface.DynamoDBAPI
+	ecrClient      ecriface.ECRAPI
+	awsSession     *session.Session
+	defaultRegion  string
+	releaseDir     string
+	releaseBucket  string
+	tfstateBucket  string
+	tflocksTable   string
+	lambdaBucket   string
+	inputStream    io.Reader
+	outputStream   io.Writer
+	errorStream    io.Writer
+	styles         *styles
+}
+
+// Opts are the options for creating a new handler.
+type Opts struct {
+	S3Client       s3iface.S3API
+	DynamoDBClient dynamodbiface.DynamoDBAPI
+	ECRClient      ecriface.ECRAPI
+	ReleaseDir     string
+	InputStream    io.Reader
+	OutputStream   io.Writer
+	ErrorStream    io.Writer
 }
 
 // New returns a new handler.
-func New(s3 s3iface.S3API) common.Handler {
-	return &handler{
-		s3: s3,
+func New(opts *Opts) common.Handler {
+	releaseDir := opts.ReleaseDir
+	if releaseDir == "" {
+		releaseDir = "/release"
+	}
+	inputStream := opts.InputStream
+	if inputStream == nil {
+		inputStream = os.Stdin
+	}
+	outputStream := opts.OutputStream
+	if outputStream == nil {
+		outputStream = os.Stdout
+	}
+	errorStream := opts.ErrorStream
+	if errorStream == nil {
+		errorStream = os.Stderr
+	}
+	return &Handler{
+		s3Client:       opts.S3Client,
+		dynamoDBClient: opts.DynamoDBClient,
+		ecrClient:      opts.ECRClient,
+		releaseDir:     releaseDir,
+		inputStream:    inputStream,
+		outputStream:   outputStream,
+		errorStream:    errorStream,
+		styles:         initStyles(),
 	}
 }
 
-func handleDefaultRegion(config map[string]interface{}, env map[string]string, errorStream io.Writer) bool {
-	region, _ := config["default_region"].(string)
-	if region == "" {
-		fmt.Fprintln(errorStream, "cdflow.yaml: config.default_region is required")
-		return false
+func (handler *Handler) getS3Client() s3iface.S3API {
+	if handler.s3Client == nil {
+		handler.s3Client = s3.New(handler.awsSession)
 	}
-	env["AWS_DEFAULT_REGION"] = region
-	return true
+	return handler.s3Client
 }
 
-func handleAWSCredentials(inputEnv map[string]string, outputEnv map[string]string, errorStream io.Writer) bool {
-	if inputEnv["AWS_ACCESS_KEY_ID"] == "" || inputEnv["AWS_SECRET_ACCESS_KEY"] == "" {
-		fmt.Fprintln(errorStream, "no AWS credentials set in environment (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, [AWS_SESSION_TOKEN])")
-		return false
+func (handler *Handler) getDynamoDBClient() dynamodbiface.DynamoDBAPI {
+	if handler.dynamoDBClient == nil {
+		handler.dynamoDBClient = dynamodb.New(handler.awsSession)
 	}
-	outputEnv["AWS_ACCESS_KEY_ID"] = inputEnv["AWS_ACCESS_KEY_ID"]
-	outputEnv["AWS_SECRET_ACCESS_KEY"] = inputEnv["AWS_SECRET_ACCESS_KEY"]
-	if inputEnv["AWS_SESSION_TOKEN"] != "" {
-		outputEnv["AWS_SESSION_TOKEN"] = inputEnv["AWS_SESSION_TOKEN"]
-	}
-	return true
+	return handler.dynamoDBClient
 }
 
-func (handler *handler) handleReleaseBucket(config map[string]interface{}, errorStream io.Writer) (bool, error) {
-	bucket, _ := config["release_bucket"].(string)
-	if bucket != "" {
-		handler.releaseBucket = bucket
-		return true, nil
+func (handler *Handler) getECRClient() ecriface.ECRAPI {
+	if handler.ecrClient == nil {
+		handler.ecrClient = ecr.New(handler.awsSession)
 	}
-	fmt.Fprintln(errorStream, "cdflow.yaml: config.release_bucket is required")
-	// TODO check if there are buckets prefixed with "cdflow2-release-" and if so give instructions for adding the config
-	// TODO otherwise give a command to create a versioned s3 bucket in the right region with the "cdflow2-release-" prefix.
-	// TODO consider automatically using a bucket with the right prefix if one and only one is found
-	return false, nil
+	return handler.ecrClient
 }
 
-func (handler *handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse, errorStream io.Writer) error {
-	if !handleDefaultRegion(request.Config, response.Env, errorStream) {
-		response.Success = false
-		return nil
+func randHexPostfix() string {
+	randomBytes := make([]byte, 20)
+	rand.Read(randomBytes)
+	randomBytes = append(randomBytes, big.NewInt(time.Now().UnixNano()).Bytes()...)
+	return fmt.Sprintf("%x", sha256.Sum256(randomBytes))[:16]
+}
+
+func filterPrefix(input []string, prefix string) []string {
+	var result []string
+	for _, item := range input {
+		if strings.HasPrefix(item, prefix) {
+			result = append(result, item)
+		}
 	}
-	if !handleAWSCredentials(request.Env, response.Env, errorStream) {
-		response.Success = false
-		return nil
+	return result
+}
+
+func (handler *Handler) UploadRelease(request *common.UploadReleaseRequest, response *common.UploadReleaseResponse, version string, config map[string]interface{}) error {
+	log.Panicln("uploading...")
+	reader, writer := io.Pipe()
+	component, _ := config["component"].(string)
+	team, _ := config["team"].(string)
+	releaseKey := fmt.Sprintf("%s/%s/%s", team, component, version)
+	writerDone := make(chan error)
+	go func() {
+		writerDone <- common.ZipRelease(writer, "/release", component, version)
+	}()
+	readerDone := make(chan error)
+	go func() {
+		_, err := s3manager.NewUploaderWithClient(handler.getS3Client()).Upload(&s3manager.UploadInput{
+			Bucket: &handler.releaseBucket,
+			Key:    &releaseKey,
+			Body:   reader,
+		})
+		readerDone <- err
+	}()
+	timeout := time.After(60 * time.Second)
+	for i := 0; i < 2; i++ {
+		select {
+		case err := <-writerDone:
+			if err != nil {
+				return err
+			}
+		case err := <-readerDone:
+			if err != nil {
+				return err
+			}
+		case <-timeout:
+			return fmt.Errorf("timeout uploading release to s3 after 60 seconds")
+		}
 	}
-	ok, err := handler.handleReleaseBucket(request.Config, errorStream)
+	return nil
+}
+
+func (handler *Handler) downloadRelease(request *common.PrepareTerraformRequest) error {
+	buffer := &aws.WriteAtBuffer{}
+	component, _ := request.Config["component"].(string)
+	team, _ := request.Config["team"].(string)
+	releaseKey := fmt.Sprintf("%s/%s/%s", team, component, request.Version)
+	size, err := s3manager.NewDownloaderWithClient(handler.getS3Client()).Download(buffer, &s3.GetObjectInput{
+		Bucket: &handler.releaseBucket,
+		Key:    &releaseKey,
+	})
 	if err != nil {
 		return err
-	} else if !ok {
-		response.Success = false
-		return nil
 	}
-	return nil
+	return common.UnzipRelease(bytes.NewReader(buffer.Bytes()), size, handler.releaseDir, component, request.Version)
 }
 
-func (handler *handler) UploadRelease(request *common.UploadReleaseRequest, response *common.UploadReleaseResponse, errorStream io.Writer, version string) error {
-
-	return nil
-}
-
-func (handler *handler) PrepareTerraform(request *common.PrepareTerraformRequest, response *common.PrepareTerraformResponse, errorStream io.Writer) error {
-
+func (handler *Handler) PrepareTerraform(request *common.PrepareTerraformRequest, response *common.PrepareTerraformResponse) error {
+	if err := handler.downloadRelease(request); err != nil {
+		return err
+	}
 	return nil
 }

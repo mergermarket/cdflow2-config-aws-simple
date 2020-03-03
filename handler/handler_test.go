@@ -6,24 +6,35 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	common "github.com/mergermarket/cdflow2-config-common"
 	"github.com/mergermarket/cdflow2-config-simple-aws/handler"
 )
+
+type mockS3Client struct {
+	s3iface.S3API
+}
+
+func (s3Client mockS3Client) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
+	return &s3.ListBucketsOutput{
+		Buckets: []*s3.Bucket{},
+	}, nil
+}
 
 func TestConfigureReleaseNoDefaultRegion(t *testing.T) {
 	request := common.CreateConfigureReleaseRequest()
 	response := common.CreateConfigureReleaseResponse()
 	var errors bytes.Buffer
 
-	type mockS3Client struct {
-		s3iface.S3API
-	}
-
 	s3Client := &mockS3Client{}
-	handler := handler.New(s3Client)
 
-	if err := handler.ConfigureRelease(request, response, &errors); err != nil {
+	handler := handler.New(&handler.Opts{
+		S3Client:    s3Client,
+		ErrorStream: &errors,
+	})
+
+	if err := handler.ConfigureRelease(request, response); err != nil {
 		log.Fatalln("unexpected error in configure release")
 	}
 
@@ -35,17 +46,13 @@ func TestConfigureReleaseNoDefaultRegion(t *testing.T) {
 	}
 }
 
-func TestConfigureRelease(t *testing.T) {
+func TestConfigureReleaseAWSCredentialsPassedThrough(t *testing.T) {
 	request := common.CreateConfigureReleaseRequest()
 	response := common.CreateConfigureReleaseResponse()
-	var errors bytes.Buffer
 
-	type mockS3Client struct {
-		s3iface.S3API
-	}
-
-	s3Client := &mockS3Client{}
-	handler := handler.New(s3Client)
+	handler := handler.New(&handler.Opts{
+		S3Client: mockS3Client{},
+	})
 
 	request.Config["default_region"] = "test-region"
 
@@ -53,7 +60,7 @@ func TestConfigureRelease(t *testing.T) {
 	request.Env["AWS_SECRET_ACCESS_KEY"] = "bar"
 	request.Env["AWS_SESSION_TOKEN"] = "baz"
 
-	if err := handler.ConfigureRelease(request, response, &errors); err != nil {
+	if err := handler.ConfigureRelease(request, response); err != nil {
 		log.Fatalln("unexpected error in configure release")
 	}
 
@@ -74,14 +81,12 @@ func TestConfigureRelease(t *testing.T) {
 func TestReleaseBucketNotConfigured(t *testing.T) {
 	request := common.CreateConfigureReleaseRequest()
 	response := common.CreateConfigureReleaseResponse()
+
 	var errors bytes.Buffer
 
-	type mockS3Client struct {
-		s3iface.S3API
-	}
-
-	s3Client := &mockS3Client{}
-	handler := handler.New(s3Client)
+	handler := handler.New(&handler.Opts{
+		ErrorStream: &errors,
+	})
 
 	request.Config["default_region"] = "test-region"
 
@@ -89,7 +94,7 @@ func TestReleaseBucketNotConfigured(t *testing.T) {
 	request.Env["AWS_SECRET_ACCESS_KEY"] = "bar"
 	request.Env["AWS_SESSION_TOKEN"] = "baz"
 
-	if err := handler.ConfigureRelease(request, response, &errors); err != nil {
+	if err := handler.ConfigureRelease(request, response); err != nil {
 		log.Fatalln("unexpected error in configure release")
 	}
 
