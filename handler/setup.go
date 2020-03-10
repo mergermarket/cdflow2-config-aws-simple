@@ -52,12 +52,14 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	if err := handler.checkOrCreateLambdaBucket(buckets); err != nil {
-		if success, ok := err.(Exit); ok {
-			response.Success = bool(success)
-			return nil
+	if handler.requiresLambdaBucket(request.ReleaseRequiredEnv) {
+		if err := handler.checkOrCreateLambdaBucket(buckets); err != nil {
+			if success, ok := err.(Exit); ok {
+				response.Success = bool(success)
+				return nil
+			}
+			return err
 		}
-		return err
 	}
 
 	if err := handler.checkOrCreateECRRepository(request.Component); err != nil {
