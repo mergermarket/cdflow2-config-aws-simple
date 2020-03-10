@@ -199,7 +199,7 @@ func (handler *Handler) handleECRRepository(component string, outputEnv map[stri
 }
 
 func (handler *Handler) requiresLambdaBucket(releaseRequiredEnv map[string][]string) bool {
-	for buildID, requiredEnv := range releaseRequiredEnv {
+	for _, requiredEnv := range releaseRequiredEnv {
 		for _, envVar := range requiredEnv {
 			if envVar == "LAMBDA_BUCKET" {
 				return true
