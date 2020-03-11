@@ -13,7 +13,7 @@ func (handler *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest
 		return nil
 	}
 
-	if !handler.checkAWSResources(request, response) {
+	if !handler.CheckAWSResources() {
 		response.Success = false
 		return nil
 	}
@@ -21,7 +21,8 @@ func (handler *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest
 	return nil
 }
 
-func (handler *Handler) checkAWSResources(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse) bool {
+// CheckAWSResources checks that the Release Bucket, Tf State Bucket & Tf Locks Table are present
+func (handler *Handler) CheckAWSResources() bool {
 	problems := 0
 	fmt.Fprintf(handler.errorStream, "%s\n\n", handler.styles.au.Underline("Checking AWS resources..."))
 
@@ -31,23 +32,23 @@ func (handler *Handler) checkAWSResources(request *common.ConfigureReleaseReques
 		return false
 	}
 
-	if ok, _ := handler.handleReleaseBucket(buckets); ok {
+	if ok, _ := handler.handleReleaseBucket(buckets); !ok {
 		problems++
 	}
 
-	if ok, _ := handler.handleTfstateBucket(buckets); ok {
+	if ok, _ := handler.handleTfstateBucket(buckets); !ok {
 		problems++
 	}
 
 	warnings := 0
 
-	ok, err := handler.handleTflocksTable()
-	if err != nil {
-		fmt.Fprintf(handler.errorStream, "%v\n\n", err)
-		return false
-	} else if !ok {
-		warnings++
-	}
+	// ok, err := handler.handleTflocksTable()
+	// if err != nil {
+	// 	fmt.Fprintf(handler.errorStream, "%v\n\n", err)
+	// 	return false
+	// } else if !ok {
+	// 	warnings++
+	// }
 
 	// if ok, _ := handler.handleLambdaBucket(response.Env, buckets); !ok {
 	// 	warnings++

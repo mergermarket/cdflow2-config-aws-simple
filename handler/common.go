@@ -110,10 +110,10 @@ func listBuckets(s3Client s3iface.S3API) ([]string, error) {
 	return result, nil
 }
 
-func (handler *Handler) handleReleaseBucket(buckets []string) (bool, bool) {
+func (handler *Handler) handleReleaseBucket(buckets []string) (ok bool, recoverable bool) {
 	buckets = filterPrefix(buckets, "cdflow2-release-")
 	if len(buckets) == 0 {
-		fmt.Fprintf(handler.errorStream, "  %s no cdflow2-release-... S3 bucket found\n", handler.styles.cross)
+		fmt.Fprintf(handler.errorStream, "  %s no release bucket found with prefix cdflow2-release-\n", handler.styles.cross)
 		return false, true
 	} else if len(buckets) > 1 {
 		fmt.Fprintf(handler.errorStream, "  %s multiple cdflow2-release-... S3 buckets found - there should be exactly one\n", handler.styles.cross)

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"math/rand"
 	"os"
@@ -103,6 +104,9 @@ func New(opts *Opts) common.Handler {
 
 func (handler *Handler) getS3Client() s3iface.S3API {
 	if handler.s3Client == nil {
+		if handler.awsSession == nil {
+			log.Panic("No AWS session")
+		}
 		handler.s3Client = s3.New(handler.awsSession)
 	}
 	return handler.s3Client
