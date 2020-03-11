@@ -17,10 +17,9 @@ func TestCheckInputConfiguration(t *testing.T) {
 
 		config := map[string]interface{}{}
 		inputEnv := map[string]string{}
-		outputEnv := map[string]string{}
 
 		// When
-		success := myHandler.CheckInputConfiguration(config, inputEnv, outputEnv)
+		success := myHandler.CheckInputConfiguration(config, inputEnv)
 
 		// Then
 		if success {

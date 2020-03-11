@@ -57,15 +57,15 @@ func (handler *Handler) printDefaultRegionStatusMessage(region string) {
 	}
 }
 
-// CheckInputConfiguration checks config from cdflow.yaml and the input environment and sets the environment variables for the release container
-func (handler *Handler) CheckInputConfiguration(config map[string]interface{}, inputEnv map[string]string, outputEnv map[string]string) bool {
+// CheckInputConfiguration checks config from cdflow.yaml and the input environment
+func (handler *Handler) CheckInputConfiguration(config map[string]interface{}, inputEnv map[string]string) bool {
 	problems := 0
 
 	fmt.Fprintf(handler.errorStream, "\n%s\n\n", handler.styles.au.Underline("Checking AWS configuration..."))
-	if !handler.handleDefaultRegion(config, outputEnv) {
+	if !handler.handleDefaultRegion(config) {
 		problems++
 	}
-	if !handler.handleAWSCredentials(inputEnv, outputEnv) {
+	if !handler.handleAWSCredentials(inputEnv) {
 		problems++
 	}
 	fmt.Fprintln(handler.errorStream, "")
@@ -79,32 +79,29 @@ func (handler *Handler) CheckInputConfiguration(config map[string]interface{}, i
 	return problems == 0
 }
 
-func (handler *Handler) handleDefaultRegion(config map[string]interface{}, env map[string]string) bool {
+func (handler *Handler) handleDefaultRegion(config map[string]interface{}) bool {
 	region := handler.getDefaultRegion(config)
 	handler.printDefaultRegionStatusMessage(region)
 	if region == "" {
 		return false
 	}
-	if env != nil {
-		env["AWS_DEFAULT_REGION"] = region
-	}
 	return true
 }
 
-func (handler *Handler) handleAWSCredentials(inputEnv map[string]string, outputEnv map[string]string) bool {
-	ok, accessKeyID, secretAccessKey, sessionToken := handler.getAWSCredentials(inputEnv)
-	handler.printAWSCredentialsStatusMessage(ok)
-	if !ok {
-		return false
-	}
-	if outputEnv != nil {
-		outputEnv["AWS_ACCESS_KEY_ID"] = accessKeyID
-		outputEnv["AWS_SECRET_ACCESS_KEY"] = secretAccessKey
-		if sessionToken != "" {
-			outputEnv["AWS_SESSION_TOKEN"] = sessionToken
-		}
-	}
-	handler.createAWSSession(accessKeyID, secretAccessKey, sessionToken)
+func (handler *Handler) handleAWSCredentials(inputEnv map[string]string) bool {
+	// ok, accessKeyID, secretAccessKey, sessionToken := handler.getAWSCredentials(inputEnv)
+	// handler.printAWSCredentialsStatusMessage(ok)
+	// if !ok {
+	// 	return false
+	// }
+	// if outputEnv != nil {
+	// 	outputEnv["AWS_ACCESS_KEY_ID"] = accessKeyID
+	// 	outputEnv["AWS_SECRET_ACCESS_KEY"] = secretAccessKey
+	// 	if sessionToken != "" {
+	// 		outputEnv["AWS_SESSION_TOKEN"] = sessionToken
+	// 	}
+	// }
+	// handler.createAWSSession(accessKeyID, secretAccessKey, sessionToken)
 	return true
 }
 

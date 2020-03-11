@@ -8,7 +8,7 @@ import (
 
 // ConfigureRelease runs before the release to provide and check config.
 func (handler *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse) error {
-	if !handler.CheckInputConfiguration(request.Config, request.Env, response.Env) {
+	if !handler.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
 	}
@@ -49,13 +49,13 @@ func (handler *Handler) checkAWSResources(request *common.ConfigureReleaseReques
 		warnings++
 	}
 
-	if ok, _ := handler.handleLambdaBucket(response.Env, buckets); !ok {
-		warnings++
-	}
+	// if ok, _ := handler.handleLambdaBucket(response.Env, buckets); !ok {
+	// 	warnings++
+	// }
 
-	if ok, _ := handler.handleECRRepository(request.Component, response.Env); !ok {
-		warnings++
-	}
+	// if ok, _ := handler.handleECRRepository(request.Component, response.Env); !ok {
+	// 	warnings++
+	// }
 
 	fmt.Fprintln(handler.errorStream, "")
 	if problems > 0 || warnings > 0 {
