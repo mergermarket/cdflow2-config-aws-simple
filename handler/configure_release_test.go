@@ -48,7 +48,7 @@ func TestConfigureRelease(t *testing.T) {
 }
 
 func TestCheckAWSResources(t *testing.T) {
-	t.Run("no bucket supplied", func(t *testing.T) {
+	t.Run("no buckets supplied", func(t *testing.T) {
 		// Given
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
@@ -68,15 +68,21 @@ func TestCheckAWSResources(t *testing.T) {
 		if !strings.Contains(errorBuffer.String(), "no release bucket found") {
 			t.Fatal("expected 'no release bucket' message, got output:", errorBuffer.String())
 		}
+		if !strings.Contains(errorBuffer.String(), "no terraform state bucket found") {
+			t.Fatal("expected 'no release bucket' message, got output:", errorBuffer.String())
+		}
 	})
 
-	t.Run("multiple buckets supplied", func(t *testing.T) {
+	t.Run("multiple release buckets supplied", func(t *testing.T) {
 		// Given
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
 
 		handler, _ := handler.New(&handler.Opts{
-			S3Client:     mockedS3{buckets: []string{"cdflow2-release-bucket-1", "cdflow2-release-bucket-2"}},
+			S3Client: mockedS3{buckets: []string{
+				"cdflow2-release-bucket-1",
+				"cdflow2-release-bucket-2",
+			}},
 			OutputStream: &outputBuffer,
 			ErrorStream:  &errorBuffer,
 		}).(*handler.Handler)
@@ -89,6 +95,60 @@ func TestCheckAWSResources(t *testing.T) {
 		}
 		if !strings.Contains(errorBuffer.String(), "multiple release buckets found") {
 			t.Fatal("expected 'multiple release buckets' message, got output:", errorBuffer.String())
+		}
+	})
+
+	t.Run("multiple tfstate buckets supplied", func(t *testing.T) {
+		// Given
+		var outputBuffer bytes.Buffer
+		var errorBuffer bytes.Buffer
+
+		handler, _ := handler.New(&handler.Opts{
+			S3Client: mockedS3{buckets: []string{
+				"cdflow2-release-bucket-1",
+				"cdflow2-tfstate-bucket-1",
+				"cdflow2-tfstate-bucket-2",
+			}},
+			OutputStream: &outputBuffer,
+			ErrorStream:  &errorBuffer,
+		}).(*handler.Handler)
+
+		// When
+		success := handler.CheckAWSResources()
+		// Then
+		if success {
+			t.Fatal("unexpected success, output:", errorBuffer.String())
+		}
+		if !strings.Contains(errorBuffer.String(), "multiple terraform state buckets found") {
+			t.Fatal("expected 'multiple terraform state buckets' message, got output:", errorBuffer.String())
+		}
+	})
+
+	t.Run("correct buckets supplied - happy path", func(t *testing.T) {
+		// Given
+		var outputBuffer bytes.Buffer
+		var errorBuffer bytes.Buffer
+
+		handler, _ := handler.New(&handler.Opts{
+			S3Client: mockedS3{buckets: []string{
+				"cdflow2-release-bucket-1",
+				"cdflow2-tfstate-bucket-1",
+			}},
+			OutputStream: &outputBuffer,
+			ErrorStream:  &errorBuffer,
+		}).(*handler.Handler)
+
+		// When
+		success := handler.CheckAWSResources()
+		// Then
+		if !success {
+			t.Fatal("unexpected failure, output:", errorBuffer.String())
+		}
+		if !strings.Contains(errorBuffer.String(), "release bucket found") {
+			t.Fatal("expected 'release bucket found' message, got output:", errorBuffer.String())
+		}
+		if !strings.Contains(errorBuffer.String(), "terraform state bucket found") {
+			t.Fatal("expected 'terraform state bucket found' message, got output:", errorBuffer.String())
 		}
 	})
 }

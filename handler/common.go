@@ -127,10 +127,10 @@ func (handler *Handler) handleReleaseBucket(buckets []string) (ok bool, recovera
 func (handler *Handler) handleTfstateBucket(buckets []string) (bool, bool) {
 	buckets = filterPrefix(buckets, "cdflow2-tfstate-")
 	if len(buckets) == 0 {
-		fmt.Fprintf(handler.errorStream, "  %s no cdflow2-tfstate-... S3 bucket found\n", handler.styles.cross)
+		fmt.Fprintf(handler.errorStream, "  %s no terraform state bucket found with prefix 'cdflow2-tfstate-'\n", handler.styles.cross)
 		return false, true
 	} else if len(buckets) > 1 {
-		fmt.Fprintf(handler.errorStream, "  %s multiple cdflow2-tfstate-... S3 buckets found - there should be exactly one\n", handler.styles.cross)
+		fmt.Fprintf(handler.errorStream, "  %s multiple terraform state buckets found with prefix 'cdflow2-tfstate-', there should be exactly one\n", handler.styles.cross)
 		return false, false
 	}
 	fmt.Fprintf(handler.errorStream, "  %s terraform state bucket found: %v\n", handler.styles.tick, buckets[0])
