@@ -28,5 +28,8 @@ func TestCheckInputConfiguration(t *testing.T) {
 		if !strings.Contains(errorBuffer.String(), "missing config.params.default_region") {
 			t.Fatal("didn't output message about missing region", errorBuffer.String())
 		}
+		if !strings.Contains(errorBuffer.String(), "missing AWS credentials") {
+			t.Fatal("didn't output message about missing AWS credentials, output was:", errorBuffer.String())
+		}
 	})
 }

@@ -89,19 +89,12 @@ func (handler *Handler) handleDefaultRegion(config map[string]interface{}) bool 
 }
 
 func (handler *Handler) handleAWSCredentials(inputEnv map[string]string) bool {
-	// ok, accessKeyID, secretAccessKey, sessionToken := handler.getAWSCredentials(inputEnv)
-	// handler.printAWSCredentialsStatusMessage(ok)
-	// if !ok {
-	// 	return false
-	// }
-	// if outputEnv != nil {
-	// 	outputEnv["AWS_ACCESS_KEY_ID"] = accessKeyID
-	// 	outputEnv["AWS_SECRET_ACCESS_KEY"] = secretAccessKey
-	// 	if sessionToken != "" {
-	// 		outputEnv["AWS_SESSION_TOKEN"] = sessionToken
-	// 	}
-	// }
-	// handler.createAWSSession(accessKeyID, secretAccessKey, sessionToken)
+	ok, accessKeyID, secretAccessKey, sessionToken := handler.getAWSCredentials(inputEnv)
+	handler.printAWSCredentialsStatusMessage(ok)
+	if !ok {
+		return false
+	}
+	handler.createAWSSession(accessKeyID, secretAccessKey, sessionToken)
 	return true
 }
 
