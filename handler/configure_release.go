@@ -8,7 +8,7 @@ import (
 
 // ConfigureRelease runs before the release to provide and check config.
 func (handler *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse) error {
-	if !handler.checkInputConfiguration(request.Config, request.Env, response.Env) {
+	if !handler.CheckInputConfiguration(request.Config, request.Env, response.Env) {
 		response.Success = false
 		return nil
 	}

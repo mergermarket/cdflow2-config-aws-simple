@@ -2,7 +2,6 @@ package handler_test
 
 import (
 	"bytes"
-	"log"
 
 	"testing"
 
@@ -26,6 +25,6 @@ func TestConfigureRelease(t *testing.T) {
 
 	// Then
 	if response.Success {
-		log.Fatal("unexpected success, no config provided")
+		t.Fatal("unexpected success, no config provided")
 	}
 }

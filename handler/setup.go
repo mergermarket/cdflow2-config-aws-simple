@@ -15,7 +15,7 @@ import (
 // Setup handles a setup request in order to pipeline setup.
 func (handler *Handler) Setup(request *common.SetupRequest, response *common.SetupResponse) error {
 
-	if !handler.checkInputConfiguration(request.Config, request.Env, nil) {
+	if !handler.CheckInputConfiguration(request.Config, request.Env, nil) {
 		response.Success = false
 		return nil
 	}

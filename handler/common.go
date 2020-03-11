@@ -57,7 +57,8 @@ func (handler *Handler) printDefaultRegionStatusMessage(region string) {
 	}
 }
 
-func (handler *Handler) checkInputConfiguration(config map[string]interface{}, inputEnv map[string]string, outputEnv map[string]string) bool {
+// CheckInputConfiguration checks config from cdflow.yaml and the input environment and sets the environment variables for the release container
+func (handler *Handler) CheckInputConfiguration(config map[string]interface{}, inputEnv map[string]string, outputEnv map[string]string) bool {
 	problems := 0
 
 	fmt.Fprintf(handler.errorStream, "\n%s\n\n", handler.styles.au.Underline("Checking AWS configuration..."))
