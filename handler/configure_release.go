@@ -40,14 +40,9 @@ func (handler *Handler) CheckAWSResources() bool {
 		problems++
 	}
 
-	warnings := 0
-
-	ok, err := handler.handleTflocksTable()
-	if err != nil {
-		fmt.Fprintf(handler.errorStream, "%v\n\n", err)
-		return false
-	} else if !ok {
-		warnings++
+	ok := handler.handleTflocksTable()
+	if !ok {
+		problems++
 	}
 
 	// if ok, _ := handler.handleLambdaBucket(response.Env, buckets); !ok {
@@ -59,7 +54,7 @@ func (handler *Handler) CheckAWSResources() bool {
 	// }
 
 	fmt.Fprintln(handler.errorStream, "")
-	if problems > 0 || warnings > 0 {
+	if problems > 0 {
 		fmt.Fprintf(handler.errorStream, "To set up AWS resources, please run:\n\n  cdflow2 setup\n\n")
 	}
 

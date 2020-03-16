@@ -2,12 +2,12 @@ package handler_test
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -35,7 +35,7 @@ type failingDynamoDB struct {
 }
 
 func (m failingDynamoDB) DescribeTable(*dynamodb.DescribeTableInput) (*dynamodb.DescribeTableOutput, error) {
-	return nil, fmt.Errorf("table not found")
+	return nil, awserr.New(dynamodb.ErrCodeResourceNotFoundException, "table not found", nil)
 }
 
 func (s3Client mockedS3) ListBuckets(*s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
@@ -196,6 +196,9 @@ func TestCheckAWSResources(t *testing.T) {
 		if success {
 			t.Fatal("unexpected success, output:", errorBuffer.String())
 		}
-	})
 
+		if !strings.Contains(errorBuffer.String(), "dynamodb table not found") {
+			t.Fatal("expected 'dynamodb table not found' message, got output:", errorBuffer.String())
+		}
+	})
 }

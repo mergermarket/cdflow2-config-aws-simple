@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -13,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
 
-const tflocksTableName = "cdflow2-terraform-locks"
+const tflocksTableName = "cdflow2-tflocks"
 
 // Exit represents a planned exit without the need for further output.
 type Exit bool
@@ -138,20 +139,20 @@ func (handler *Handler) handleTfstateBucket(buckets []string) (bool, bool) {
 	return true, false
 }
 
-func (handler *Handler) handleTflocksTable() (bool, error) {
+func (handler *Handler) handleTflocksTable() bool {
 	_, err := handler.getDynamoDBClient().DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(tflocksTableName),
 	})
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == dynamodb.ErrCodeResourceNotFoundException {
-			fmt.Fprintf(handler.errorStream, "  %s no %s dynamodb table found (optional)\n", handler.styles.warningCross, tflocksTableName)
-			return false, nil
+			fmt.Fprintf(handler.errorStream, "  %s dynamodb table not found: %s\n", handler.styles.cross, tflocksTableName)
+			return false
 		}
-		return false, err
+		log.Panic(err)
 	}
 	fmt.Fprintf(handler.errorStream, "  %s terraform dynamodb table for locking found: %s\n", handler.styles.tick, tflocksTableName)
 	handler.tflocksTable = tflocksTableName
-	return true, nil
+	return true
 }
 
 func (handler *Handler) handleLambdaBucket(outputEnv map[string]string, buckets []string) (bool, bool) {

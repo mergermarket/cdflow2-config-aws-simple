@@ -151,10 +151,7 @@ func (handler *Handler) createTfstateBucket() (string, error) {
 }
 
 func (handler *Handler) checkOrCreateTflocksTable() error {
-	ok, err := handler.handleTflocksTable()
-	if err != nil {
-		return err
-	}
+	ok := handler.handleTflocksTable()
 	if !ok {
 		fmt.Fprintf(handler.errorStream, "\n")
 		switch handler.choice("create "+tflocksTableName+" table (optional)", []string{"yes", "skip", "exit"}) {
