@@ -2,11 +2,14 @@ package handler_test
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/mergermarket/cdflow2-config-simple-aws/handler"
@@ -17,6 +20,22 @@ import (
 type mockedS3 struct {
 	s3iface.S3API
 	buckets []string
+}
+
+type mockedDynamoDB struct {
+	dynamodbiface.DynamoDBAPI
+}
+
+func (m mockedDynamoDB) DescribeTable(*dynamodb.DescribeTableInput) (*dynamodb.DescribeTableOutput, error) {
+	return &dynamodb.DescribeTableOutput{}, nil
+}
+
+type failingDynamoDB struct {
+	dynamodbiface.DynamoDBAPI
+}
+
+func (m failingDynamoDB) DescribeTable(*dynamodb.DescribeTableInput) (*dynamodb.DescribeTableOutput, error) {
+	return nil, fmt.Errorf("table not found")
 }
 
 func (s3Client mockedS3) ListBuckets(*s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
@@ -54,9 +73,10 @@ func TestCheckAWSResources(t *testing.T) {
 		var errorBuffer bytes.Buffer
 
 		handler, _ := handler.New(&handler.Opts{
-			S3Client:     mockedS3{},
-			OutputStream: &outputBuffer,
-			ErrorStream:  &errorBuffer,
+			S3Client:       mockedS3{},
+			OutputStream:   &outputBuffer,
+			ErrorStream:    &errorBuffer,
+			DynamoDBClient: &mockedDynamoDB{},
 		}).(*handler.Handler)
 
 		// When
@@ -83,8 +103,9 @@ func TestCheckAWSResources(t *testing.T) {
 				"cdflow2-release-bucket-1",
 				"cdflow2-release-bucket-2",
 			}},
-			OutputStream: &outputBuffer,
-			ErrorStream:  &errorBuffer,
+			OutputStream:   &outputBuffer,
+			ErrorStream:    &errorBuffer,
+			DynamoDBClient: &mockedDynamoDB{},
 		}).(*handler.Handler)
 
 		// When
@@ -109,8 +130,9 @@ func TestCheckAWSResources(t *testing.T) {
 				"cdflow2-tfstate-bucket-1",
 				"cdflow2-tfstate-bucket-2",
 			}},
-			OutputStream: &outputBuffer,
-			ErrorStream:  &errorBuffer,
+			OutputStream:   &outputBuffer,
+			ErrorStream:    &errorBuffer,
+			DynamoDBClient: &mockedDynamoDB{},
 		}).(*handler.Handler)
 
 		// When
@@ -134,8 +156,9 @@ func TestCheckAWSResources(t *testing.T) {
 				"cdflow2-release-bucket-1",
 				"cdflow2-tfstate-bucket-1",
 			}},
-			OutputStream: &outputBuffer,
-			ErrorStream:  &errorBuffer,
+			OutputStream:   &outputBuffer,
+			ErrorStream:    &errorBuffer,
+			DynamoDBClient: &mockedDynamoDB{},
 		}).(*handler.Handler)
 
 		// When
@@ -151,4 +174,28 @@ func TestCheckAWSResources(t *testing.T) {
 			t.Fatal("expected 'terraform state bucket found' message, got output:", errorBuffer.String())
 		}
 	})
+
+	t.Run("test tflock", func(t *testing.T) {
+		// Given
+		var outputBuffer bytes.Buffer
+		var errorBuffer bytes.Buffer
+
+		handler, _ := handler.New(&handler.Opts{
+			S3Client: mockedS3{buckets: []string{
+				"cdflow2-release-bucket-1",
+				"cdflow2-tfstate-bucket-1",
+			}},
+			OutputStream:   &outputBuffer,
+			ErrorStream:    &errorBuffer,
+			DynamoDBClient: &failingDynamoDB{},
+		}).(*handler.Handler)
+
+		// When
+		success := handler.CheckAWSResources()
+		// Then
+		if success {
+			t.Fatal("unexpected success, output:", errorBuffer.String())
+		}
+	})
+
 }

@@ -42,13 +42,13 @@ func (handler *Handler) CheckAWSResources() bool {
 
 	warnings := 0
 
-	// ok, err := handler.handleTflocksTable()
-	// if err != nil {
-	// 	fmt.Fprintf(handler.errorStream, "%v\n\n", err)
-	// 	return false
-	// } else if !ok {
-	// 	warnings++
-	// }
+	ok, err := handler.handleTflocksTable()
+	if err != nil {
+		fmt.Fprintf(handler.errorStream, "%v\n\n", err)
+		return false
+	} else if !ok {
+		warnings++
+	}
 
 	// if ok, _ := handler.handleLambdaBucket(response.Env, buckets); !ok {
 	// 	warnings++
