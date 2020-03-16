@@ -1,29 +1,25 @@
 package ui_test
 
 import (
-	"io"
-	"log"
+	"bytes"
 	"testing"
+
+	"github.com/mergermarket/cdflow2-config-simple-aws/internal/ui"
 )
 
 func TestConfirm(t *testing.T) {
 	// Given
-	inputReader, inputWriter = io.Pipe()
-	outputReader, outputWriter = io.Pipe()
+	userInput := &bytes.Buffer{}
+	userInput.WriteString("yes\n")
 
-	ui := ui.New(inputReader, outputWriter)
-
-	go func() {
-		data := make([]byte, 1024)
-		outputReader.Read(&data)
-		log.Println("finished reading")
-	}()
+	stdout := &bytes.Buffer{}
 
 	// When
-	confirmed := ui.Confirm("test")
+	confirmed := ui.Confirm("do you want to continue?", userInput, stdout)
 
 	// Then
 	if !confirmed {
 		t.Fatal("expected confirmed")
 	}
+
 }
