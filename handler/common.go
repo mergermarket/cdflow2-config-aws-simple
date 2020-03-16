@@ -150,7 +150,7 @@ func (handler *Handler) handleTflocksTable() bool {
 		}
 		log.Panic(err)
 	}
-	fmt.Fprintf(handler.errorStream, "  %s terraform dynamodb table for locking found: %s\n", handler.styles.tick, tflocksTableName)
+	fmt.Fprintf(handler.errorStream, "  %s dynamodb table found: %s\n", handler.styles.tick, tflocksTableName)
 	handler.tflocksTable = tflocksTableName
 	return true
 }

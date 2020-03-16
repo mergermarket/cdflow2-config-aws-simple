@@ -175,7 +175,7 @@ func TestCheckAWSResources(t *testing.T) {
 		}
 	})
 
-	t.Run("test tflock", func(t *testing.T) {
+	t.Run("test tflock with no table", func(t *testing.T) {
 		// Given
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
@@ -201,4 +201,32 @@ func TestCheckAWSResources(t *testing.T) {
 			t.Fatal("expected 'dynamodb table not found' message, got output:", errorBuffer.String())
 		}
 	})
+
+	t.Run("test tflock table exists", func(t *testing.T) {
+		// Given
+		var outputBuffer bytes.Buffer
+		var errorBuffer bytes.Buffer
+
+		handler, _ := handler.New(&handler.Opts{
+			S3Client: mockedS3{buckets: []string{
+				"cdflow2-release-bucket-1",
+				"cdflow2-tfstate-bucket-1",
+			}},
+			OutputStream:   &outputBuffer,
+			ErrorStream:    &errorBuffer,
+			DynamoDBClient: &mockedDynamoDB{},
+		}).(*handler.Handler)
+
+		// When
+		success := handler.CheckAWSResources()
+		// Then
+		if !success {
+			t.Fatal("unexpected failure, output:", errorBuffer.String())
+		}
+
+		if !strings.Contains(errorBuffer.String(), "dynamodb table found") {
+			t.Fatal("expected 'dynamodb table found' message, got output:", errorBuffer.String())
+		}
+	})
+
 }
