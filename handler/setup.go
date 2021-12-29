@@ -36,41 +36,41 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	// if err := handler.checkOrCreateTfstateBucket(buckets); err != nil {
-	// 	if success, ok := err.(Exit); ok {
-	// 		response.Success = bool(success)
-	// 		return nil
-	// 	}
-	// 	return err
-	// }
+	if err := handler.checkOrCreateTfstateBucket(buckets); err != nil {
+		if success, ok := err.(Exit); ok {
+			response.Success = bool(success)
+			return nil
+		}
+		return err
+	}
 
-	// if err := handler.checkOrCreateTflocksTable(); err != nil {
-	// 	if success, ok := err.(Exit); ok {
-	// 		response.Success = bool(success)
-	// 		return nil
-	// 	}
-	// 	return err
-	// }
+	if err := handler.checkOrCreateTflocksTable(); err != nil {
+		if success, ok := err.(Exit); ok {
+			response.Success = bool(success)
+			return nil
+		}
+		return err
+	}
 
-	// if handler.requiresLambdaBucket(request.ReleaseRequiredEnv) {
-	// 	if err := handler.checkOrCreateLambdaBucket(buckets); err != nil {
-	// 		if success, ok := err.(Exit); ok {
-	// 			response.Success = bool(success)
-	// 			return nil
-	// 		}
-	// 		return err
-	// 	}
-	// }
+	if handler.requiresLambdaBucket(request.ReleaseRequiredEnv) {
+		if err := handler.checkOrCreateLambdaBucket(buckets); err != nil {
+			if success, ok := err.(Exit); ok {
+				response.Success = bool(success)
+				return nil
+			}
+			return err
+		}
+	}
 
-	// if err := handler.checkOrCreateECRRepository(request.Component); err != nil {
-	// 	if success, ok := err.(Exit); ok {
-	// 		response.Success = bool(success)
-	// 		return nil
-	// 	}
-	// 	return err
-	// }
+	if err := handler.checkOrCreateECRRepository(request.Component); err != nil {
+		if success, ok := err.(Exit); ok {
+			response.Success = bool(success)
+			return nil
+		}
+		return err
+	}
 
-	// fmt.Fprintf(handler.errorStream, "\n")
+	fmt.Fprintf(handler.errorStream, "\n")
 
 	return nil
 }
