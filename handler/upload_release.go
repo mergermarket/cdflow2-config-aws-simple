@@ -10,15 +10,15 @@ import (
 	common "github.com/mergermarket/cdflow2-config-common"
 )
 
-func (handler *Handler) UploadRelease(request *common.UploadReleaseRequest, response *common.UploadReleaseResponse, version string, config map[string]interface{}) error {
-	log.Panicln("uploading...")
+func (handler *Handler) UploadRelease(request *common.UploadReleaseRequest, response *common.UploadReleaseResponse, configureReleaseRequest *common.ConfigureReleaseRequest, releaseDir string) error {
+	log.Println("uploading...")
 	reader, writer := io.Pipe()
-	component, _ := config["component"].(string)
-	team, _ := config["team"].(string)
-	releaseKey := fmt.Sprintf("%s/%s/%s", team, component, version)
+	component := configureReleaseRequest.Component
+	team := configureReleaseRequest.Team
+	releaseKey := fmt.Sprintf("%s/%s/%s", team, component, configureReleaseRequest.Version)
 	writerDone := make(chan error)
 	go func() {
-		writerDone <- common.ZipRelease(writer, "/release", component, version)
+		writerDone <- common.ZipRelease(writer, releaseDir, component, configureReleaseRequest.Version, request.TerraformImage)
 	}()
 	readerDone := make(chan error)
 	go func() {
@@ -29,7 +29,7 @@ func (handler *Handler) UploadRelease(request *common.UploadReleaseRequest, resp
 		})
 		readerDone <- err
 	}()
-	timeout := time.After(60 * time.Second)
+	timeout := time.After(120 * time.Second)
 	for i := 0; i < 2; i++ {
 		select {
 		case err := <-writerDone:

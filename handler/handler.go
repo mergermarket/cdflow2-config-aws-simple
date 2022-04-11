@@ -50,14 +50,16 @@ type Handler struct {
 	ecrClient      ecriface.ECRAPI
 	awsSession     *session.Session
 	defaultRegion  string
-	releaseDir     string
+	ReleaseFolder  string
 	releaseBucket  string
 	tfstateBucket  string
 	tflocksTable   string
 	lambdaBucket   string
-	inputStream    io.Reader
-	outputStream   io.Writer
-	errorStream    io.Writer
+	InputStream    io.Reader
+	OutputStream   io.Writer
+	ErrorStream    io.Writer
+	ReleaseLoader  common.ReleaseLoader
+	ReleaseSaver   common.ReleaseSaver
 	styles         *styles
 }
 
@@ -73,31 +75,31 @@ type Opts struct {
 }
 
 // New returns a new handler.
-func New(opts *Opts) common.Handler {
+func New(opts *Opts) *Handler {
 	releaseDir := opts.ReleaseDir
 	if releaseDir == "" {
 		releaseDir = "/release"
 	}
-	inputStream := opts.InputStream
-	if inputStream == nil {
-		inputStream = os.Stdin
+	InputStream := opts.InputStream
+	if InputStream == nil {
+		InputStream = os.Stdin
 	}
-	outputStream := opts.OutputStream
-	if outputStream == nil {
-		outputStream = os.Stdout
+	OutputStream := opts.OutputStream
+	if OutputStream == nil {
+		OutputStream = os.Stdout
 	}
-	errorStream := opts.ErrorStream
-	if errorStream == nil {
-		errorStream = os.Stderr
+	ErrorStream := opts.ErrorStream
+	if ErrorStream == nil {
+		ErrorStream = os.Stderr
 	}
 	return &Handler{
 		s3Client:       opts.S3Client,
 		dynamoDBClient: opts.DynamoDBClient,
 		ecrClient:      opts.ECRClient,
-		releaseDir:     releaseDir,
-		inputStream:    inputStream,
-		outputStream:   outputStream,
-		errorStream:    errorStream,
+		ReleaseFolder:  releaseDir,
+		InputStream:    InputStream,
+		OutputStream:   OutputStream,
+		ErrorStream:    ErrorStream,
 		styles:         initStyles(),
 	}
 }
@@ -148,19 +150,13 @@ func (handler *Handler) downloadRelease(request *common.PrepareTerraformRequest)
 	component, _ := request.Config["component"].(string)
 	team, _ := request.Config["team"].(string)
 	releaseKey := fmt.Sprintf("%s/%s/%s", team, component, request.Version)
-	size, err := s3manager.NewDownloaderWithClient(handler.getS3Client()).Download(buffer, &s3.GetObjectInput{
+	_, err := s3manager.NewDownloaderWithClient(handler.getS3Client()).Download(buffer, &s3.GetObjectInput{
 		Bucket: &handler.releaseBucket,
 		Key:    &releaseKey,
 	})
 	if err != nil {
 		return err
 	}
-	return common.UnzipRelease(bytes.NewReader(buffer.Bytes()), size, handler.releaseDir, component, request.Version)
-}
-
-func (handler *Handler) PrepareTerraform(request *common.PrepareTerraformRequest, response *common.PrepareTerraformResponse) error {
-	if err := handler.downloadRelease(request); err != nil {
-		return err
-	}
-	return nil
+	_, err = common.UnzipRelease(bytes.NewReader(buffer.Bytes()), handler.ReleaseFolder, component, request.Version)
+	return err
 }
