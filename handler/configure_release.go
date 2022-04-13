@@ -2,18 +2,29 @@ package handler
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
 
 // ConfigureRelease runs before the release to provide and check config.
-func (handler *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse) error {
-	if !handler.CheckInputConfiguration(request.Config, request.Env) {
+func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse) error {
+	team, err := h.getTeam(request.Config["team"])
+	if err != nil {
+		response.Success = false
+		fmt.Fprintln(h.ErrorStream, err)
+		return nil
+	}
+
+	response.AdditionalMetadata["team"] = team
+
+	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
 	}
 
-	if !handler.CheckAWSResources() {
+	if !h.CheckAWSResources() {
 		response.Success = false
 		return nil
 	}
@@ -59,4 +70,21 @@ func (handler *Handler) CheckAWSResources() bool {
 	}
 
 	return problems == 0
+}
+
+func setAWSEnvironmentVariables(env map[string]string, creds *credentials.Value, region string) {
+	env["AWS_ACCESS_KEY_ID"] = creds.AccessKeyID
+	env["AWS_SECRET_ACCESS_KEY"] = creds.SecretAccessKey
+	env["AWS_SESSION_TOKEN"] = creds.SessionToken
+	// depending on the SDK one of these will be used
+	env["AWS_REGION"] = region         // java & go
+	env["AWS_DEFAULT_REGION"] = region // python, node, etc.
+}
+
+func setCdflowDockerAuthVariables(respEnv map[string]string, reqEnv map[string]string) {
+	for key, element := range reqEnv {
+		if strings.HasPrefix(key, "CDFLOW2_DOCKER_AUTH_") {
+			respEnv[key] = element
+		}
+	}
 }

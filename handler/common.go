@@ -84,10 +84,7 @@ func (handler *Handler) CheckInputConfiguration(config map[string]interface{}, i
 func (handler *Handler) handleDefaultRegion(config map[string]interface{}) bool {
 	region := handler.getDefaultRegion(config)
 	handler.printDefaultRegionStatusMessage(region)
-	if region == "" {
-		return false
-	}
-	return true
+	return region != ""
 }
 
 func (handler *Handler) handleAWSCredentials(inputEnv map[string]string) bool {

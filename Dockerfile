@@ -6,10 +6,15 @@ RUN go mod download
 ADD . .
 ENV CGO_ENABLED=0 
 ENV GOOS=linux
-#RUN sh ./test.sh
+RUN sh ./test.sh
 RUN go build -a -installsuffix cgo -o app .
 
 FROM scratch
 COPY --from=build /app /app
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+VOLUME /tmp
+ENV TMPDIR /tmp
+
+LABEL type="platform"
+
 ENTRYPOINT ["/app"]

@@ -2,47 +2,45 @@ package handler
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
 
-func (handler *Handler) UploadRelease(request *common.UploadReleaseRequest, response *common.UploadReleaseResponse, configureReleaseRequest *common.ConfigureReleaseRequest, releaseDir string) error {
+func (h *Handler) UploadRelease(request *common.UploadReleaseRequest, response *common.UploadReleaseResponse, configureReleaseRequest *common.ConfigureReleaseRequest, releaseDir string) error {
 	log.Println("uploading...")
-	reader, writer := io.Pipe()
-	component := configureReleaseRequest.Component
-	team := configureReleaseRequest.Team
-	releaseKey := fmt.Sprintf("%s/%s/%s", team, component, configureReleaseRequest.Version)
-	writerDone := make(chan error)
-	go func() {
-		writerDone <- common.ZipRelease(writer, releaseDir, component, configureReleaseRequest.Version, request.TerraformImage)
-	}()
-	readerDone := make(chan error)
-	go func() {
-		_, err := s3manager.NewUploaderWithClient(handler.getS3Client()).Upload(&s3manager.UploadInput{
-			Bucket: &handler.releaseBucket,
-			Key:    &releaseKey,
-			Body:   reader,
-		})
-		readerDone <- err
-	}()
-	timeout := time.After(120 * time.Second)
-	for i := 0; i < 2; i++ {
-		select {
-		case err := <-writerDone:
-			if err != nil {
-				return err
-			}
-		case err := <-readerDone:
-			if err != nil {
-				return err
-			}
-		case <-timeout:
-			return fmt.Errorf("timeout uploading release to s3 after 60 seconds")
-		}
+	team, err := h.getTeam(configureReleaseRequest.Config["team"])
+	if err != nil {
+		response.Success = false
+		fmt.Fprintln(h.ErrorStream, err)
+		return nil
 	}
+
+	releaseReader, err := h.ReleaseSaver.Save(
+		configureReleaseRequest.Component,
+		configureReleaseRequest.Version,
+		request.TerraformImage,
+		releaseDir)
+	if err != nil {
+		return err
+	}
+	defer releaseReader.Close()
+
+	releaseKey := releaseS3Key(team, configureReleaseRequest.Component, configureReleaseRequest.Version)
+	s3Uploader := s3manager.NewUploaderWithClient(h.getS3Client())
+	if _, err := s3Uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(h.releaseBucket),
+		Key:    aws.String(releaseKey),
+		Body:   releaseReader,
+	}); err != nil {
+		fmt.Fprintln(h.ErrorStream, "Unable to upload release to S3:", err)
+		response.Success = false
+		return nil
+	}
+
+	fmt.Fprintf(h.ErrorStream, "- Release uploaded to s3://%s/%s\n", h.releaseBucket, releaseKey)
+
 	return nil
 }
