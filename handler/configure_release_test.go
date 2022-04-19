@@ -72,12 +72,12 @@ func TestCheckAWSResources(t *testing.T) {
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
 
-		handler, _ := handler.New(&handler.Opts{
+		handler := handler.New(&handler.Opts{
 			S3Client:       mockedS3{},
 			OutputStream:   &outputBuffer,
 			ErrorStream:    &errorBuffer,
 			DynamoDBClient: &mockedDynamoDB{},
-		}).(*handler.Handler)
+		})
 
 		// When
 		success := handler.CheckAWSResources()
@@ -98,7 +98,7 @@ func TestCheckAWSResources(t *testing.T) {
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
 
-		handler, _ := handler.New(&handler.Opts{
+		handler := handler.New(&handler.Opts{
 			S3Client: mockedS3{buckets: []string{
 				"cdflow2-release-bucket-1",
 				"cdflow2-release-bucket-2",
@@ -106,7 +106,7 @@ func TestCheckAWSResources(t *testing.T) {
 			OutputStream:   &outputBuffer,
 			ErrorStream:    &errorBuffer,
 			DynamoDBClient: &mockedDynamoDB{},
-		}).(*handler.Handler)
+		})
 
 		// When
 		success := handler.CheckAWSResources()
@@ -124,7 +124,7 @@ func TestCheckAWSResources(t *testing.T) {
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
 
-		handler, _ := handler.New(&handler.Opts{
+		handler := handler.New(&handler.Opts{
 			S3Client: mockedS3{buckets: []string{
 				"cdflow2-release-bucket-1",
 				"cdflow2-tfstate-bucket-1",
@@ -133,7 +133,7 @@ func TestCheckAWSResources(t *testing.T) {
 			OutputStream:   &outputBuffer,
 			ErrorStream:    &errorBuffer,
 			DynamoDBClient: &mockedDynamoDB{},
-		}).(*handler.Handler)
+		})
 
 		// When
 		success := handler.CheckAWSResources()
@@ -151,7 +151,7 @@ func TestCheckAWSResources(t *testing.T) {
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
 
-		handler, _ := handler.New(&handler.Opts{
+		handler := handler.New(&handler.Opts{
 			S3Client: mockedS3{buckets: []string{
 				"cdflow2-release-bucket-1",
 				"cdflow2-tfstate-bucket-1",
@@ -159,7 +159,7 @@ func TestCheckAWSResources(t *testing.T) {
 			OutputStream:   &outputBuffer,
 			ErrorStream:    &errorBuffer,
 			DynamoDBClient: &mockedDynamoDB{},
-		}).(*handler.Handler)
+		})
 
 		// When
 		success := handler.CheckAWSResources()
@@ -180,7 +180,7 @@ func TestCheckAWSResources(t *testing.T) {
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
 
-		handler, _ := handler.New(&handler.Opts{
+		handler := handler.New(&handler.Opts{
 			S3Client: mockedS3{buckets: []string{
 				"cdflow2-release-bucket-1",
 				"cdflow2-tfstate-bucket-1",
@@ -188,7 +188,7 @@ func TestCheckAWSResources(t *testing.T) {
 			OutputStream:   &outputBuffer,
 			ErrorStream:    &errorBuffer,
 			DynamoDBClient: &failingDynamoDB{},
-		}).(*handler.Handler)
+		})
 
 		// When
 		success := handler.CheckAWSResources()
@@ -207,7 +207,7 @@ func TestCheckAWSResources(t *testing.T) {
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
 
-		handler, _ := handler.New(&handler.Opts{
+		handler := handler.New(&handler.Opts{
 			S3Client: mockedS3{buckets: []string{
 				"cdflow2-release-bucket-1",
 				"cdflow2-tfstate-bucket-1",
@@ -215,7 +215,7 @@ func TestCheckAWSResources(t *testing.T) {
 			OutputStream:   &outputBuffer,
 			ErrorStream:    &errorBuffer,
 			DynamoDBClient: &mockedDynamoDB{},
-		}).(*handler.Handler)
+		})
 
 		// When
 		success := handler.CheckAWSResources()

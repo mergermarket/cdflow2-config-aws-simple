@@ -13,7 +13,7 @@ func TestCheckInputConfiguration(t *testing.T) {
 		// Given
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
-		myHandler, _ := handler.New(&handler.Opts{OutputStream: &outputBuffer, ErrorStream: &errorBuffer}).(*handler.Handler)
+		myHandler := handler.New(&handler.Opts{OutputStream: &outputBuffer, ErrorStream: &errorBuffer})
 
 		config := map[string]interface{}{}
 		inputEnv := map[string]string{}
@@ -37,7 +37,7 @@ func TestCheckInputConfiguration(t *testing.T) {
 		// Given
 		var outputBuffer bytes.Buffer
 		var errorBuffer bytes.Buffer
-		myHandler, _ := handler.New(&handler.Opts{OutputStream: &outputBuffer, ErrorStream: &errorBuffer}).(*handler.Handler)
+		myHandler := handler.New(&handler.Opts{OutputStream: &outputBuffer, ErrorStream: &errorBuffer})
 
 		config := map[string]interface{}{
 			"default_region": "eu-west-1",
