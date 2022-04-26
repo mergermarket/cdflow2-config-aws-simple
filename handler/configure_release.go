@@ -7,13 +7,22 @@ import (
 )
 
 // ConfigureRelease runs before the release to provide and check config.
-func (handler *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse) error {
-	if !handler.CheckInputConfiguration(request.Config, request.Env) {
+func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, response *common.ConfigureReleaseResponse) error {
+	team, err := h.getTeam(request.Config["team"])
+	if err != nil {
+		response.Success = false
+		fmt.Fprintln(h.ErrorStream, err)
+		return nil
+	}
+
+	response.AdditionalMetadata["team"] = team
+
+	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
 	}
 
-	if !handler.CheckAWSResources() {
+	if !h.CheckAWSResources() {
 		response.Success = false
 		return nil
 	}
@@ -24,11 +33,11 @@ func (handler *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest
 // CheckAWSResources checks that the Release Bucket, Tf State Bucket & Tf Locks Table are present
 func (handler *Handler) CheckAWSResources() bool {
 	problems := 0
-	fmt.Fprintf(handler.errorStream, "%s\n\n", handler.styles.au.Underline("Checking AWS resources..."))
+	fmt.Fprintf(handler.ErrorStream, "%s\n\n", handler.styles.au.Underline("Checking AWS resources..."))
 
 	buckets, err := listBuckets(handler.getS3Client())
 	if err != nil {
-		fmt.Fprintf(handler.errorStream, "%v\n\n", err)
+		fmt.Fprintf(handler.ErrorStream, "%v\n\n", err)
 		return false
 	}
 
@@ -53,9 +62,9 @@ func (handler *Handler) CheckAWSResources() bool {
 	// 	warnings++
 	// }
 
-	fmt.Fprintln(handler.errorStream, "")
+	fmt.Fprintln(handler.ErrorStream, "")
 	if problems > 0 {
-		fmt.Fprintf(handler.errorStream, "To set up AWS resources, please run:\n\n  cdflow2 setup\n\n")
+		fmt.Fprintf(handler.ErrorStream, "To set up AWS resources, please run:\n\n  cdflow2 setup\n\n")
 	}
 
 	return problems == 0

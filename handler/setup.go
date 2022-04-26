@@ -2,8 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"io"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -20,11 +18,11 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return nil
 	}
 
-	fmt.Fprintf(handler.errorStream, "%s\n\n", handler.styles.au.Underline("Checking AWS resources..."))
+	fmt.Fprintf(handler.ErrorStream, "%s\n\n", handler.styles.au.Underline("Checking AWS resources..."))
 
 	buckets, err := listBuckets(handler.getS3Client())
 	if err != nil {
-		fmt.Fprintf(handler.errorStream, "%v\n\n", err)
+		fmt.Fprintf(handler.ErrorStream, "%v\n\n", err)
 		return nil
 	}
 
@@ -52,7 +50,7 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	if handler.requiresLambdaBucket(request.ReleaseRequiredEnv) {
+	if handler.requiresLambdaBucket(request.ReleaseRequirements) {
 		if err := handler.checkOrCreateLambdaBucket(buckets); err != nil {
 			if success, ok := err.(Exit); ok {
 				response.Success = bool(success)
@@ -70,7 +68,7 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	fmt.Fprintf(handler.errorStream, "\n")
+	fmt.Fprintf(handler.ErrorStream, "\n")
 
 	return nil
 }
@@ -78,22 +76,18 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 func (handler *Handler) checkOrCreateReleaseBucket(buckets []string) error {
 	ok, recoverable := handler.handleReleaseBucket(buckets)
 	if !ok && !recoverable {
-		fmt.Fprintf(handler.errorStream, "\nUnable to resolve automatically.\n\n")
+		fmt.Fprintf(handler.ErrorStream, "\nUnable to resolve automatically.\n\n")
 		return Exit(false)
 	}
 	if !ok {
-		fmt.Fprintf(handler.errorStream, "\n")
-		switch handler.choice("create release bucket", []string{"yes", "skip", "exit"}) {
-		case "yes":
-			name, err := handler.createReleaseBucket()
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(handler.errorStream, "\n  %s created release bucket: %v\n", handler.styles.tick, name)
-		case "skip":
-		default: // exit
-			return Exit(true)
+		fmt.Fprintf(handler.ErrorStream, "\n")
+
+		name, err := handler.createReleaseBucket()
+		if err != nil {
+			return err
 		}
+		fmt.Fprintf(handler.ErrorStream, "\n  %s created release bucket: %v\n", handler.styles.tick, name)
+
 	}
 	return nil
 }
@@ -111,22 +105,18 @@ func (handler *Handler) createReleaseBucket() (string, error) {
 func (handler *Handler) checkOrCreateTfstateBucket(buckets []string) error {
 	ok, recoverable := handler.handleTfstateBucket(buckets)
 	if !ok && !recoverable {
-		fmt.Fprintf(handler.errorStream, "\nUnable to resolve automatically.\n\n")
+		fmt.Fprintf(handler.ErrorStream, "\nUnable to resolve automatically.\n\n")
 		return Exit(false)
 	}
 	if !ok {
-		fmt.Fprintf(handler.errorStream, "\n")
-		switch handler.choice("create tfstate bucket", []string{"yes", "skip", "exit"}) {
-		case "yes":
-			name, err := handler.createTfstateBucket()
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(handler.errorStream, "\n  %s created tfstate bucket: %v\n", handler.styles.tick, name)
-		case "skip":
-		default: // exit
-			return Exit(true)
+		fmt.Fprintf(handler.ErrorStream, "\n")
+
+		name, err := handler.createTfstateBucket()
+		if err != nil {
+			return err
 		}
+		fmt.Fprintf(handler.ErrorStream, "\n  %s created tfstate bucket: %v\n", handler.styles.tick, name)
+
 	}
 	return nil
 }
@@ -153,17 +143,13 @@ func (handler *Handler) createTfstateBucket() (string, error) {
 func (handler *Handler) checkOrCreateTflocksTable() error {
 	ok := handler.handleTflocksTable()
 	if !ok {
-		fmt.Fprintf(handler.errorStream, "\n")
-		switch handler.choice("create "+tflocksTableName+" table (optional)", []string{"yes", "skip", "exit"}) {
-		case "yes":
-			if err := handler.createTflocksTable(); err != nil {
-				return err
-			}
-			fmt.Fprintf(handler.errorStream, "\n  %s created %s dynamodb table\n", handler.styles.tick, tflocksTableName)
-		case "skip":
-		default: // exit
-			return Exit(true)
+		fmt.Fprintf(handler.ErrorStream, "\n")
+
+		if err := handler.createTflocksTable(); err != nil {
+			return err
 		}
+		fmt.Fprintf(handler.ErrorStream, "\n  %s created %s dynamodb table\n", handler.styles.tick, tflocksTableName)
+
 	}
 	return nil
 }
@@ -195,22 +181,17 @@ func (handler *Handler) createTflocksTable() error {
 func (handler *Handler) checkOrCreateLambdaBucket(buckets []string) error {
 	ok, recoverable := handler.handleLambdaBucket(nil, buckets)
 	if !ok && !recoverable {
-		fmt.Fprintf(handler.errorStream, "\nUnable to resolve automatically.\n\n")
+		fmt.Fprintf(handler.ErrorStream, "\nUnable to resolve automatically.\n\n")
 		return Exit(false)
 	}
 	if !ok {
-		fmt.Fprintf(handler.errorStream, "\n")
-		switch handler.choice("create lambda bucket", []string{"yes", "skip", "exit"}) {
-		case "yes":
-			name, err := handler.createLambdaBucket()
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(handler.errorStream, "\n  %s created lambda bucket: %v\n", handler.styles.tick, name)
-		case "skip":
-		default: // exit
-			return Exit(true)
+
+		name, err := handler.createLambdaBucket()
+		if err != nil {
+			return err
 		}
+		fmt.Fprintf(handler.ErrorStream, "\n  %s created lambda bucket: %v\n", handler.styles.tick, name)
+
 	}
 	return nil
 }
@@ -231,17 +212,13 @@ func (handler *Handler) checkOrCreateECRRepository(component string) error {
 		return err
 	}
 	if !ok {
-		fmt.Fprintf(handler.errorStream, "\n")
-		switch handler.choice("create ECR registry", []string{"yes", "skip", "exit"}) {
-		case "yes":
-			if err := handler.createECRRepository(component); err != nil {
-				return err
-			}
-			fmt.Fprintf(handler.errorStream, "\n  %s created ECR registry: %v\n", handler.styles.tick, component)
-		case "skip":
-		default: // exit
-			return Exit(true)
+		fmt.Fprintf(handler.ErrorStream, "\n")
+
+		if err := handler.createECRRepository(component); err != nil {
+			return err
 		}
+		fmt.Fprintf(handler.ErrorStream, "\n  %s created ECR registry: %v\n", handler.styles.tick, component)
+
 	}
 	return nil
 }
@@ -282,31 +259,4 @@ func (handler *Handler) createECRRepository(component string) error {
 		return err
 	}
 	return nil
-}
-
-func contains(list []string, item string) bool {
-	for _, subject := range list {
-		if item == subject {
-			return true
-		}
-	}
-	return false
-}
-
-func (handler *Handler) choice(prompt string, choices []string) string {
-	for {
-		fmt.Fprintf(handler.errorStream, "%s [%s]? ", prompt, strings.Join(choices, ", "))
-		var answer string
-		_, err := fmt.Fscanln(handler.inputStream, &answer)
-		if err != nil {
-			if err == io.EOF {
-				return "exit"
-			} else {
-				continue
-			}
-		}
-		if contains(choices, answer) {
-			return answer
-		}
-	}
 }

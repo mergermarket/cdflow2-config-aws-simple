@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
@@ -20,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/logrusorgru/aurora"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
@@ -50,14 +47,16 @@ type Handler struct {
 	ecrClient      ecriface.ECRAPI
 	awsSession     *session.Session
 	defaultRegion  string
-	releaseDir     string
+	ReleaseFolder  string
 	releaseBucket  string
 	tfstateBucket  string
 	tflocksTable   string
 	lambdaBucket   string
-	inputStream    io.Reader
-	outputStream   io.Writer
-	errorStream    io.Writer
+	InputStream    io.Reader
+	OutputStream   io.Writer
+	ErrorStream    io.Writer
+	ReleaseLoader  common.ReleaseLoader
+	ReleaseSaver   common.ReleaseSaver
 	styles         *styles
 }
 
@@ -70,34 +69,39 @@ type Opts struct {
 	InputStream    io.Reader
 	OutputStream   io.Writer
 	ErrorStream    io.Writer
+	ReleaseSaver   common.ReleaseSaver
+	ReleaseLoader  common.ReleaseLoader
 }
 
 // New returns a new handler.
-func New(opts *Opts) common.Handler {
+func New(opts *Opts) *Handler {
 	releaseDir := opts.ReleaseDir
 	if releaseDir == "" {
 		releaseDir = "/release"
 	}
-	inputStream := opts.InputStream
-	if inputStream == nil {
-		inputStream = os.Stdin
+	InputStream := opts.InputStream
+	if InputStream == nil {
+		InputStream = os.Stdin
 	}
-	outputStream := opts.OutputStream
-	if outputStream == nil {
-		outputStream = os.Stdout
+	OutputStream := opts.OutputStream
+	if OutputStream == nil {
+		OutputStream = os.Stdout
 	}
-	errorStream := opts.ErrorStream
-	if errorStream == nil {
-		errorStream = os.Stderr
+	ErrorStream := opts.ErrorStream
+	if ErrorStream == nil {
+		ErrorStream = os.Stderr
 	}
+
 	return &Handler{
 		s3Client:       opts.S3Client,
 		dynamoDBClient: opts.DynamoDBClient,
 		ecrClient:      opts.ECRClient,
-		releaseDir:     releaseDir,
-		inputStream:    inputStream,
-		outputStream:   outputStream,
-		errorStream:    errorStream,
+		ReleaseFolder:  releaseDir,
+		InputStream:    InputStream,
+		OutputStream:   OutputStream,
+		ErrorStream:    ErrorStream,
+		ReleaseSaver:   common.CreateReleaseSaver(),
+		ReleaseLoader:  common.CreateReleaseLoader(),
 		styles:         initStyles(),
 	}
 }
@@ -143,24 +147,14 @@ func filterPrefix(input []string, prefix string) []string {
 	return result
 }
 
-func (handler *Handler) downloadRelease(request *common.PrepareTerraformRequest) error {
-	buffer := &aws.WriteAtBuffer{}
-	component, _ := request.Config["component"].(string)
-	team, _ := request.Config["team"].(string)
-	releaseKey := fmt.Sprintf("%s/%s/%s", team, component, request.Version)
-	size, err := s3manager.NewDownloaderWithClient(handler.getS3Client()).Download(buffer, &s3.GetObjectInput{
-		Bucket: &handler.releaseBucket,
-		Key:    &releaseKey,
-	})
-	if err != nil {
-		return err
-	}
-	return common.UnzipRelease(bytes.NewReader(buffer.Bytes()), size, handler.releaseDir, component, request.Version)
+func releaseS3Key(team, component, version string) string {
+	return fmt.Sprintf("%s/%s/%s-%s.zip", team, component, component, version)
 }
 
-func (handler *Handler) PrepareTerraform(request *common.PrepareTerraformRequest, response *common.PrepareTerraformResponse) error {
-	if err := handler.downloadRelease(request); err != nil {
-		return err
+func (h *Handler) getTeam(team interface{}) (string, error) {
+	teamString, ok := team.(string)
+	if !ok || teamString == "" {
+		return "", fmt.Errorf("cdflow.yaml error: config.params.team must be set to a non-empty string")
 	}
-	return nil
+	return teamString, nil
 }
