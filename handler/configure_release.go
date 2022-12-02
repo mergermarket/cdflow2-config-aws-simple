@@ -15,6 +15,7 @@ func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, resp
 		return nil
 	}
 
+	response.MonitoringData["team"] = team
 	response.AdditionalMetadata["team"] = team
 
 	if !h.CheckInputConfiguration(request.Config, request.Env) {
@@ -31,25 +32,25 @@ func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, resp
 }
 
 // CheckAWSResources checks that the Release Bucket, Tf State Bucket & Tf Locks Table are present
-func (handler *Handler) CheckAWSResources() bool {
+func (h *Handler) CheckAWSResources() bool {
 	problems := 0
-	fmt.Fprintf(handler.ErrorStream, "%s\n\n", handler.styles.au.Underline("Checking AWS resources..."))
+	fmt.Fprintf(h.ErrorStream, "%s\n\n", h.styles.au.Underline("Checking AWS resources..."))
 
-	buckets, err := listBuckets(handler.getS3Client())
+	buckets, err := listBuckets(h.getS3Client())
 	if err != nil {
-		fmt.Fprintf(handler.ErrorStream, "%v\n\n", err)
+		fmt.Fprintf(h.ErrorStream, "%v\n\n", err)
 		return false
 	}
 
-	if ok, _ := handler.handleReleaseBucket(buckets); !ok {
+	if ok, _ := h.handleReleaseBucket(buckets); !ok {
 		problems++
 	}
 
-	if ok, _ := handler.handleTfstateBucket(buckets); !ok {
+	if ok, _ := h.handleTfstateBucket(buckets); !ok {
 		problems++
 	}
 
-	ok := handler.handleTflocksTable()
+	ok := h.handleTflocksTable()
 	if !ok {
 		problems++
 	}
@@ -62,9 +63,9 @@ func (handler *Handler) CheckAWSResources() bool {
 	// 	warnings++
 	// }
 
-	fmt.Fprintln(handler.ErrorStream, "")
+	fmt.Fprintln(h.ErrorStream, "")
 	if problems > 0 {
-		fmt.Fprintf(handler.ErrorStream, "To set up AWS resources, please run:\n\n  cdflow2 setup\n\n")
+		fmt.Fprintf(h.ErrorStream, "To set up AWS resources, please run:\n\n  cdflow2 setup\n\n")
 	}
 
 	return problems == 0

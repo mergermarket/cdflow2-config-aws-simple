@@ -106,28 +106,28 @@ func New(opts *Opts) *Handler {
 	}
 }
 
-func (handler *Handler) getS3Client() s3iface.S3API {
-	if handler.s3Client == nil {
-		if handler.awsSession == nil {
+func (h *Handler) getS3Client() s3iface.S3API {
+	if h.s3Client == nil {
+		if h.awsSession == nil {
 			log.Panic("No AWS session")
 		}
-		handler.s3Client = s3.New(handler.awsSession)
+		h.s3Client = s3.New(h.awsSession)
 	}
-	return handler.s3Client
+	return h.s3Client
 }
 
-func (handler *Handler) getDynamoDBClient() dynamodbiface.DynamoDBAPI {
-	if handler.dynamoDBClient == nil {
-		handler.dynamoDBClient = dynamodb.New(handler.awsSession)
+func (h *Handler) getDynamoDBClient() dynamodbiface.DynamoDBAPI {
+	if h.dynamoDBClient == nil {
+		h.dynamoDBClient = dynamodb.New(h.awsSession)
 	}
-	return handler.dynamoDBClient
+	return h.dynamoDBClient
 }
 
-func (handler *Handler) getECRClient() ecriface.ECRAPI {
-	if handler.ecrClient == nil {
-		handler.ecrClient = ecr.New(handler.awsSession)
+func (h *Handler) getECRClient() ecriface.ECRAPI {
+	if h.ecrClient == nil {
+		h.ecrClient = ecr.New(h.awsSession)
 	}
-	return handler.ecrClient
+	return h.ecrClient
 }
 
 func randHexPostfix() string {

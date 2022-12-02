@@ -8,8 +8,8 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGw
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
 github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381 h1:bqDmpDG49ZRnB5PcgP0RXtQvnMSgIF14M7CBd2shtXs=
 github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381/go.mod h1:7rIyQOR62GCctdiQpZ/zOJlFyk6y+94wXzv6RNZgaR4=
-github.com/mergermarket/cdflow2-config-common v0.45.0 h1:n4LP7dKbVfwR+3Q6EjBegSDxzquO+fdp15WtzZ+I6Yo=
-github.com/mergermarket/cdflow2-config-common v0.45.0/go.mod h1:2H4TjCvIfJFxEr4Jp3u0DuV5b+N5kCQnao+anVTqBqE=
+github.com/mergermarket/cdflow2-config-common v0.45.1-0.20221201115717-80d5ca9df35d h1:BM1NxBQLb2kPGttXVc+dA4Dju9mq6Nu3RjVU32pOAc8=
+github.com/mergermarket/cdflow2-config-common v0.45.1-0.20221201115717-80d5ca9df35d/go.mod h1:2H4TjCvIfJFxEr4Jp3u0DuV5b+N5kCQnao+anVTqBqE=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
