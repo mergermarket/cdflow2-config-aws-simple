@@ -156,7 +156,7 @@ func (h *Handler) handleTflocksTable() bool {
 	return true
 }
 
-func (h *Handler) handleLambdaBucket(outputEnv map[string]string, buckets []string) (bool, bool) {
+t mfunc (h *Handler) handleLambdaBucket(outputEnv map[string]string, buckets []string) (bool, bool) {
 	buckets = filterPrefix(buckets, "cdflow2-lambda-")
 	if len(buckets) == 0 {
 		fmt.Fprintf(h.ErrorStream, "  %s no cdflow2-lambda-... S3 bucket found (required only if building a lambda)\n", h.styles.warningCross)
@@ -173,22 +173,20 @@ func (h *Handler) handleLambdaBucket(outputEnv map[string]string, buckets []stri
 	return true, false
 }
 
-func (h *Handler) handleECRRepository(component string, outputEnv map[string]string) (bool, error) {
-	response, err := h.getECRClient().DescribeRepositories(&ecr.DescribeRepositoriesInput{
+func (handler *Handler) getECRRepository(component string) (string, error) {
+	response, err := handler.getECRClient().DescribeRepositories(&ecr.DescribeRepositoriesInput{
 		RepositoryNames: []*string{aws.String(component)},
 	})
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == ecr.ErrCodeRepositoryNotFoundException {
-			fmt.Fprintf(h.ErrorStream, "  %s no %s ECR repository (required only for docker images)\n", h.styles.warningCross, component)
-			return false, nil
+			fmt.Fprintf(handler.ErrorStream, "  %s no %s ECR repository (required only for docker images)\n", handler.styles.warningCross, component)
+			return "", nil
 		}
-		return false, err
+		return "", err
 	}
-	fmt.Fprintf(h.ErrorStream, "  %s ECR repository found: %s\n", h.styles.tick, component)
-	if outputEnv != nil {
-		outputEnv["ECR_REPOSITORY"] = *response.Repositories[0].RepositoryUri
-	}
-	return true, nil
+	fmt.Fprintf(handler.ErrorStream, "  %s ECR repository found: %s\n", handler.styles.tick, component)
+
+	return *response.Repositories[0].RepositoryUri, nil
 }
 
 func (h *Handler) requiresLambdaBucket(releaseRequiredEnv map[string]*common.ReleaseRequirements) bool {
