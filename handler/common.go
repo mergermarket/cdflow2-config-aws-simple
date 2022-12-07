@@ -207,7 +207,7 @@ func (h *Handler) getDatadogAPIKey() string {
 
 	value, err := client.GetSecretValue(&secretsmanager.GetSecretValueInput{SecretId: datadogAPIKeyArn})
 	if err != nil {
-		fmt.Fprintf(h.ErrorStream, "Unable to fetch Datadog API key: %v.\n", err)
+		fmt.Fprintf(h.ErrorStream, "Unable to fetch Datadog API key: %v.\n\n", err)
 		return ""
 	}
 
