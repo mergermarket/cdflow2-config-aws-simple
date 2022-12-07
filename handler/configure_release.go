@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"strings"
 
 	common "github.com/mergermarket/cdflow2-config-common"
 )
@@ -20,6 +21,56 @@ func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, resp
 	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
+	}
+
+	for buildID, reqs := range request.ReleaseRequirements {
+		env := make(map[string]string)
+		response.Env[buildID] = env
+
+		credentials, err := h.awsSession.Config.Credentials.Get()
+		if err != nil {
+			fmt.Fprintf(h.ErrorStream, "Unable to fetch AWS credentials: %v.\n", err)
+			response.Success = false
+			return nil
+		}
+
+		region := *h.awsSession.Config.Region
+
+		for _, need := range reqs.Needs {
+			if need == "ecr" {
+				env["AWS_ACCESS_KEY_ID"] = credentials.AccessKeyID
+				env["AWS_SECRET_ACCESS_KEY"] = credentials.SecretAccessKey
+				env["AWS_SESSION_TOKEN"] = credentials.SessionToken
+				env["AWS_REGION"] = region
+				env["AWS_DEFAULT_REGION"] = region
+
+				for key, element := range request.Env {
+					if strings.HasPrefix(key, "CDFLOW2_DOCKER_AUTH_") {
+						env[key] = element
+					}
+				}
+
+				repoURI, err := h.getECRRepository(request.Component)
+				if err != nil {
+					fmt.Fprintln(h.ErrorStream, err)
+					response.Success = false
+					return nil
+				}
+
+				if repoURI == "" {
+					fmt.Fprintf(h.ErrorStream, "ECR repository '%s' does not exists, did you run 'setup' first?\n", request.Component)
+					response.Success = false
+					return nil
+				}
+
+				env["ECR_REPOSITORY"] = repoURI
+				env["ECR_TAG"] = fmt.Sprintf("%s-%s", buildID, request.Version)
+			} else {
+				fmt.Fprintf(h.ErrorStream, "unable to satisfy %q need for %q build", need, buildID)
+				response.Success = false
+				return nil
+			}
+		}
 	}
 
 	if !h.CheckAWSResources() {
@@ -53,14 +104,6 @@ func (handler *Handler) CheckAWSResources() bool {
 	if !ok {
 		problems++
 	}
-
-	// if ok, _ := handler.handleLambdaBucket(response.Env, buckets); !ok {
-	// 	warnings++
-	// }
-
-	// if ok, _ := handler.handleECRRepository(request.Component, response.Env); !ok {
-	// 	warnings++
-	// }
 
 	fmt.Fprintln(handler.ErrorStream, "")
 	if problems > 0 {
