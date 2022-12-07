@@ -212,13 +212,13 @@ func (h *Handler) createLambdaBucket() (string, error) {
 	return name, nil
 }
 
-func (handler *Handler) checkOrCreateECRRepository(component string) error {
-	repoURI, err := handler.getECRRepository(component)
+func (h *Handler) checkOrCreateECRRepository(component string) error {
+	repoURI, err := h.getECRRepository(component)
 	if err != nil {
 		return err
 	}
 	if repoURI == "" {
-		fmt.Fprintf(handler.ErrorStream, "\n")
+		fmt.Fprintf(h.ErrorStream, "\n")
 
 		if err := h.createECRRepository(component); err != nil {
 			return err

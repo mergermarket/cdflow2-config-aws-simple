@@ -25,7 +25,7 @@ func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, resp
 	}
 
 	response.Monitoring.APIKey = h.getDatadogAPIKey()
-	
+
 	for buildID, reqs := range request.ReleaseRequirements {
 		env := make(map[string]string)
 		response.Env[buildID] = env
@@ -108,19 +108,8 @@ func (h *Handler) CheckAWSResources() bool {
 		problems++
 	}
 
-<<<<<<< HEAD
-	// if ok, _ := handler.handleLambdaBucket(response.Env, buckets); !ok {
-	// 	warnings++
-	// }
-
-	// if ok, _ := handler.handleECRRepository(request.Component, response.Env); !ok {
-	// 	warnings++
-	// }
-
 	fmt.Fprintln(h.ErrorStream, "")
-=======
-	fmt.Fprintln(handler.ErrorStream, "")
->>>>>>> 9d9dcc0752223b39c66fa77ac9d3095a4718b9f3
+
 	if problems > 0 {
 		fmt.Fprintf(h.ErrorStream, "To set up AWS resources, please run:\n\n  cdflow2 setup\n\n")
 	}
