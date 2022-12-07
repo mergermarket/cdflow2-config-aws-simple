@@ -12,14 +12,16 @@ import (
 
 // Setup handles a setup request in order to pipeline setup.
 func (h *Handler) Setup(request *common.SetupRequest, response *common.SetupResponse) error {
-	team, err := h.getTeam(request.Config["team"])
-	if err == nil {
-		response.MonitoringData["team"] = team
-	}
-
 	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
+	}
+
+	response.Monitoring.APIKey = h.getDatadogAPIKey()
+
+	team, err := h.getTeam(request.Config["team"])
+	if err == nil {
+		response.Monitoring.Data["team"] = team
 	}
 
 	fmt.Fprintf(h.ErrorStream, "%s\n\n", h.styles.au.Underline("Checking AWS resources..."))

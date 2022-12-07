@@ -18,6 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/logrusorgru/aurora"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
@@ -42,22 +44,23 @@ func initStyles() *styles {
 
 // Handler handles config requests.
 type Handler struct {
-	s3Client       s3iface.S3API
-	dynamoDBClient dynamodbiface.DynamoDBAPI
-	ecrClient      ecriface.ECRAPI
-	awsSession     *session.Session
-	defaultRegion  string
-	ReleaseFolder  string
-	releaseBucket  string
-	tfstateBucket  string
-	tflocksTable   string
-	lambdaBucket   string
-	InputStream    io.Reader
-	OutputStream   io.Writer
-	ErrorStream    io.Writer
-	ReleaseLoader  common.ReleaseLoader
-	ReleaseSaver   common.ReleaseSaver
-	styles         *styles
+	s3Client             s3iface.S3API
+	dynamoDBClient       dynamodbiface.DynamoDBAPI
+	ecrClient            ecriface.ECRAPI
+	secretsManagerClient secretsmanageriface.SecretsManagerAPI
+	awsSession           *session.Session
+	defaultRegion        string
+	ReleaseFolder        string
+	releaseBucket        string
+	tfstateBucket        string
+	tflocksTable         string
+	lambdaBucket         string
+	InputStream          io.Reader
+	OutputStream         io.Writer
+	ErrorStream          io.Writer
+	ReleaseLoader        common.ReleaseLoader
+	ReleaseSaver         common.ReleaseSaver
+	styles               *styles
 }
 
 // Opts are the options for creating a new handler.
@@ -128,6 +131,13 @@ func (h *Handler) getECRClient() ecriface.ECRAPI {
 		h.ecrClient = ecr.New(h.awsSession)
 	}
 	return h.ecrClient
+}
+
+func (h *Handler) getSecretManagerClient() secretsmanageriface.SecretsManagerAPI {
+	if h.secretsManagerClient == nil {
+		h.secretsManagerClient = secretsmanager.New(h.awsSession)
+	}
+	return h.secretsManagerClient
 }
 
 func randHexPostfix() string {

@@ -15,13 +15,15 @@ func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, resp
 		return nil
 	}
 
-	response.MonitoringData["team"] = team
+	response.Monitoring.Data["team"] = team
 	response.AdditionalMetadata["team"] = team
 
 	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
 	}
+
+	response.Monitoring.APIKey = h.getDatadogAPIKey()
 
 	if !h.CheckAWSResources() {
 		response.Success = false

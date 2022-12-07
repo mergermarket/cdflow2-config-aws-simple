@@ -17,16 +17,18 @@ func (h *Handler) PrepareTerraform(request *common.PrepareTerraformRequest, resp
 		return nil
 	}
 
-	response.MonitoringData["team"] = team
+	response.Monitoring.Data["team"] = team
 
 	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
 	}
 
+	response.Monitoring.APIKey = h.getDatadogAPIKey()
+
 	accountID := h.getAccountID()
 	if accountID != "" {
-		response.MonitoringData["account_id"] = accountID
+		response.Monitoring.Data["account_id"] = accountID
 	}
 
 	if !h.CheckAWSResources() {

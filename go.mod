@@ -8,4 +8,4 @@ require (
 	github.com/mergermarket/cdflow2-config-common v0.45.0
 )
 
-replace github.com/mergermarket/cdflow2-config-common => github.com/mergermarket/cdflow2-config-common v0.45.1-0.20221201115717-80d5ca9df35d
+replace github.com/mergermarket/cdflow2-config-common => github.com/mergermarket/cdflow2-config-common v0.45.1-0.20221207100344-1fa7bee09a8a

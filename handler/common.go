@@ -12,10 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
 
 const tflocksTableName = "cdflow2-tflocks"
+
+var datadogAPIKeyArn = aws.String("arn:aws:secretsmanager:eu-west-1:109201950569:secret:cdflow2/datadog/datadog-api-key-ARHVef")
 
 // Exit represents a planned exit without the need for further output.
 type Exit bool
@@ -197,4 +200,16 @@ func (h *Handler) requiresLambdaBucket(releaseRequiredEnv map[string]*common.Rel
 		}
 	}
 	return false
+}
+
+func (h *Handler) getDatadogAPIKey() string {
+	client := h.getSecretManagerClient()
+
+	value, err := client.GetSecretValue(&secretsmanager.GetSecretValueInput{SecretId: datadogAPIKeyArn})
+	if err != nil {
+		fmt.Fprintf(h.ErrorStream, "Unable to fetch Datadog API key: %v.\n", err)
+		return ""
+	}
+
+	return *value.SecretString
 }
