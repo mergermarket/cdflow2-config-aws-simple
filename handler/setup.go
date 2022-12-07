@@ -207,11 +207,11 @@ func (handler *Handler) createLambdaBucket() (string, error) {
 }
 
 func (handler *Handler) checkOrCreateECRRepository(component string) error {
-	ok, err := handler.handleECRRepository(component, nil)
+	repoURI, err := handler.getECRRepository(component)
 	if err != nil {
 		return err
 	}
-	if !ok {
+	if repoURI == "" {
 		fmt.Fprintf(handler.ErrorStream, "\n")
 
 		if err := handler.createECRRepository(component); err != nil {
