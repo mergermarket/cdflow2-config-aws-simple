@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
@@ -136,7 +135,7 @@ func (h *Handler) getECRClient() ecriface.ECRAPI {
 
 func (h *Handler) getSecretManagerClient() secretsmanageriface.SecretsManagerAPI {
 	if h.secretsManagerClient == nil {
-		h.secretsManagerClient = secretsmanager.New(h.awsSession, aws.NewConfig().WithRegion("eu-west-1"))
+		h.secretsManagerClient = secretsmanager.New(h.awsSession)
 	}
 	return h.secretsManagerClient
 }
