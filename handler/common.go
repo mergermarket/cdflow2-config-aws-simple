@@ -18,7 +18,7 @@ import (
 
 const tflocksTableName = "cdflow2-tflocks"
 
-var datadogAPIKeyArn = aws.String("arn:aws:secretsmanager:eu-west-1:109201950569:secret:cdflow2/datadog/datadog-api-key-ARHVef")
+var datadogAPIKeyName = aws.String("cdflow2/datadog/datadog-api-key")
 
 // Exit represents a planned exit without the need for further output.
 type Exit bool
@@ -203,7 +203,7 @@ func (h *Handler) requiresLambdaBucket(releaseRequiredEnv map[string]*common.Rel
 func (h *Handler) getDatadogAPIKey() string {
 	client := h.getSecretManagerClient()
 
-	value, err := client.GetSecretValue(&secretsmanager.GetSecretValueInput{SecretId: datadogAPIKeyArn})
+	value, err := client.GetSecretValue(&secretsmanager.GetSecretValueInput{SecretId: datadogAPIKeyName})
 	if err != nil {
 		fmt.Fprintf(h.ErrorStream, "Unable to fetch Datadog API key: %v.\n\n", err)
 		return ""
