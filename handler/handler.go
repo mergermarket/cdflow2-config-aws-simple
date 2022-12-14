@@ -18,6 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/logrusorgru/aurora"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
@@ -42,22 +44,23 @@ func initStyles() *styles {
 
 // Handler handles config requests.
 type Handler struct {
-	s3Client       s3iface.S3API
-	dynamoDBClient dynamodbiface.DynamoDBAPI
-	ecrClient      ecriface.ECRAPI
-	awsSession     *session.Session
-	defaultRegion  string
-	ReleaseFolder  string
-	releaseBucket  string
-	tfstateBucket  string
-	tflocksTable   string
-	lambdaBucket   string
-	InputStream    io.Reader
-	OutputStream   io.Writer
-	ErrorStream    io.Writer
-	ReleaseLoader  common.ReleaseLoader
-	ReleaseSaver   common.ReleaseSaver
-	styles         *styles
+	s3Client             s3iface.S3API
+	dynamoDBClient       dynamodbiface.DynamoDBAPI
+	ecrClient            ecriface.ECRAPI
+	secretsManagerClient secretsmanageriface.SecretsManagerAPI
+	awsSession           *session.Session
+	defaultRegion        string
+	ReleaseFolder        string
+	releaseBucket        string
+	tfstateBucket        string
+	tflocksTable         string
+	lambdaBucket         string
+	InputStream          io.Reader
+	OutputStream         io.Writer
+	ErrorStream          io.Writer
+	ReleaseLoader        common.ReleaseLoader
+	ReleaseSaver         common.ReleaseSaver
+	styles               *styles
 }
 
 // Opts are the options for creating a new handler.
@@ -106,28 +109,35 @@ func New(opts *Opts) *Handler {
 	}
 }
 
-func (handler *Handler) getS3Client() s3iface.S3API {
-	if handler.s3Client == nil {
-		if handler.awsSession == nil {
+func (h *Handler) getS3Client() s3iface.S3API {
+	if h.s3Client == nil {
+		if h.awsSession == nil {
 			log.Panic("No AWS session")
 		}
-		handler.s3Client = s3.New(handler.awsSession)
+		h.s3Client = s3.New(h.awsSession)
 	}
-	return handler.s3Client
+	return h.s3Client
 }
 
-func (handler *Handler) getDynamoDBClient() dynamodbiface.DynamoDBAPI {
-	if handler.dynamoDBClient == nil {
-		handler.dynamoDBClient = dynamodb.New(handler.awsSession)
+func (h *Handler) getDynamoDBClient() dynamodbiface.DynamoDBAPI {
+	if h.dynamoDBClient == nil {
+		h.dynamoDBClient = dynamodb.New(h.awsSession)
 	}
-	return handler.dynamoDBClient
+	return h.dynamoDBClient
 }
 
-func (handler *Handler) getECRClient() ecriface.ECRAPI {
-	if handler.ecrClient == nil {
-		handler.ecrClient = ecr.New(handler.awsSession)
+func (h *Handler) getECRClient() ecriface.ECRAPI {
+	if h.ecrClient == nil {
+		h.ecrClient = ecr.New(h.awsSession)
 	}
-	return handler.ecrClient
+	return h.ecrClient
+}
+
+func (h *Handler) getSecretManagerClient() secretsmanageriface.SecretsManagerAPI {
+	if h.secretsManagerClient == nil {
+		h.secretsManagerClient = secretsmanager.New(h.awsSession)
+	}
+	return h.secretsManagerClient
 }
 
 func randHexPostfix() string {

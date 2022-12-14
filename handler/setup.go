@@ -11,22 +11,28 @@ import (
 )
 
 // Setup handles a setup request in order to pipeline setup.
-func (handler *Handler) Setup(request *common.SetupRequest, response *common.SetupResponse) error {
-
-	if !handler.CheckInputConfiguration(request.Config, request.Env) {
+func (h *Handler) Setup(request *common.SetupRequest, response *common.SetupResponse) error {
+	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
 	}
 
-	fmt.Fprintf(handler.ErrorStream, "%s\n\n", handler.styles.au.Underline("Checking AWS resources..."))
+	response.Monitoring.APIKey = h.getDatadogAPIKey()
 
-	buckets, err := listBuckets(handler.getS3Client())
+	team, err := h.getTeam(request.Config["team"])
+	if err == nil {
+		response.Monitoring.Data["team"] = team
+	}
+
+	fmt.Fprintf(h.ErrorStream, "%s\n\n", h.styles.au.Underline("Checking AWS resources..."))
+
+	buckets, err := listBuckets(h.getS3Client())
 	if err != nil {
-		fmt.Fprintf(handler.ErrorStream, "%v\n\n", err)
+		fmt.Fprintf(h.ErrorStream, "%v\n\n", err)
 		return nil
 	}
 
-	if err := handler.checkOrCreateReleaseBucket(buckets); err != nil {
+	if err := h.checkOrCreateReleaseBucket(buckets); err != nil {
 		if success, ok := err.(Exit); ok {
 			response.Success = bool(success)
 			return nil
@@ -34,7 +40,7 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	if err := handler.checkOrCreateTfstateBucket(buckets); err != nil {
+	if err := h.checkOrCreateTfstateBucket(buckets); err != nil {
 		if success, ok := err.(Exit); ok {
 			response.Success = bool(success)
 			return nil
@@ -42,7 +48,7 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	if err := handler.checkOrCreateTflocksTable(); err != nil {
+	if err := h.checkOrCreateTflocksTable(); err != nil {
 		if success, ok := err.(Exit); ok {
 			response.Success = bool(success)
 			return nil
@@ -50,8 +56,8 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	if handler.requiresLambdaBucket(request.ReleaseRequirements) {
-		if err := handler.checkOrCreateLambdaBucket(buckets); err != nil {
+	if h.requiresLambdaBucket(request.ReleaseRequirements) {
+		if err := h.checkOrCreateLambdaBucket(buckets); err != nil {
 			if success, ok := err.(Exit); ok {
 				response.Success = bool(success)
 				return nil
@@ -60,7 +66,7 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		}
 	}
 
-	if err := handler.checkOrCreateECRRepository(request.Component); err != nil {
+	if err := h.checkOrCreateECRRepository(request.Component); err != nil {
 		if success, ok := err.(Exit); ok {
 			response.Success = bool(success)
 			return nil
@@ -68,33 +74,33 @@ func (handler *Handler) Setup(request *common.SetupRequest, response *common.Set
 		return err
 	}
 
-	fmt.Fprintf(handler.ErrorStream, "\n")
+	fmt.Fprintf(h.ErrorStream, "\n")
 
 	return nil
 }
 
-func (handler *Handler) checkOrCreateReleaseBucket(buckets []string) error {
-	ok, recoverable := handler.handleReleaseBucket(buckets)
+func (h *Handler) checkOrCreateReleaseBucket(buckets []string) error {
+	ok, recoverable := h.handleReleaseBucket(buckets)
 	if !ok && !recoverable {
-		fmt.Fprintf(handler.ErrorStream, "\nUnable to resolve automatically.\n\n")
+		fmt.Fprintf(h.ErrorStream, "\nUnable to resolve automatically.\n\n")
 		return Exit(false)
 	}
 	if !ok {
-		fmt.Fprintf(handler.ErrorStream, "\n")
+		fmt.Fprintf(h.ErrorStream, "\n")
 
-		name, err := handler.createReleaseBucket()
+		name, err := h.createReleaseBucket()
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(handler.ErrorStream, "\n  %s created release bucket: %v\n", handler.styles.tick, name)
+		fmt.Fprintf(h.ErrorStream, "\n  %s created release bucket: %v\n", h.styles.tick, name)
 
 	}
 	return nil
 }
 
-func (handler *Handler) createReleaseBucket() (string, error) {
+func (h *Handler) createReleaseBucket() (string, error) {
 	name := "cdflow2-release-" + randHexPostfix()
-	if _, err := handler.getS3Client().CreateBucket(&s3.CreateBucketInput{
+	if _, err := h.getS3Client().CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String(name),
 	}); err != nil {
 		return "", err
@@ -102,28 +108,28 @@ func (handler *Handler) createReleaseBucket() (string, error) {
 	return name, nil
 }
 
-func (handler *Handler) checkOrCreateTfstateBucket(buckets []string) error {
-	ok, recoverable := handler.handleTfstateBucket(buckets)
+func (h *Handler) checkOrCreateTfstateBucket(buckets []string) error {
+	ok, recoverable := h.handleTfstateBucket(buckets)
 	if !ok && !recoverable {
-		fmt.Fprintf(handler.ErrorStream, "\nUnable to resolve automatically.\n\n")
+		fmt.Fprintf(h.ErrorStream, "\nUnable to resolve automatically.\n\n")
 		return Exit(false)
 	}
 	if !ok {
-		fmt.Fprintf(handler.ErrorStream, "\n")
+		fmt.Fprintf(h.ErrorStream, "\n")
 
-		name, err := handler.createTfstateBucket()
+		name, err := h.createTfstateBucket()
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(handler.ErrorStream, "\n  %s created tfstate bucket: %v\n", handler.styles.tick, name)
+		fmt.Fprintf(h.ErrorStream, "\n  %s created tfstate bucket: %v\n", h.styles.tick, name)
 
 	}
 	return nil
 }
 
-func (handler *Handler) createTfstateBucket() (string, error) {
+func (h *Handler) createTfstateBucket() (string, error) {
 	name := "cdflow2-tfstate-" + randHexPostfix()
-	s3Client := handler.getS3Client()
+	s3Client := h.getS3Client()
 	if _, err := s3Client.CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String(name),
 	}); err != nil {
@@ -140,22 +146,22 @@ func (handler *Handler) createTfstateBucket() (string, error) {
 	return name, nil
 }
 
-func (handler *Handler) checkOrCreateTflocksTable() error {
-	ok := handler.handleTflocksTable()
+func (h *Handler) checkOrCreateTflocksTable() error {
+	ok := h.handleTflocksTable()
 	if !ok {
-		fmt.Fprintf(handler.ErrorStream, "\n")
+		fmt.Fprintf(h.ErrorStream, "\n")
 
-		if err := handler.createTflocksTable(); err != nil {
+		if err := h.createTflocksTable(); err != nil {
 			return err
 		}
-		fmt.Fprintf(handler.ErrorStream, "\n  %s created %s dynamodb table\n", handler.styles.tick, tflocksTableName)
+		fmt.Fprintf(h.ErrorStream, "\n  %s created %s dynamodb table\n", h.styles.tick, tflocksTableName)
 
 	}
 	return nil
 }
 
-func (handler *Handler) createTflocksTable() error {
-	dynamodbClient := handler.getDynamoDBClient()
+func (h *Handler) createTflocksTable() error {
+	dynamodbClient := h.getDynamoDBClient()
 	lockIDAttribute := aws.String("LockID")
 	if _, err := dynamodbClient.CreateTable(&dynamodb.CreateTableInput{
 		TableName: aws.String(tflocksTableName),
@@ -178,27 +184,27 @@ func (handler *Handler) createTflocksTable() error {
 	return nil
 }
 
-func (handler *Handler) checkOrCreateLambdaBucket(buckets []string) error {
-	ok, recoverable := handler.handleLambdaBucket(nil, buckets)
+func (h *Handler) checkOrCreateLambdaBucket(buckets []string) error {
+	ok, recoverable := h.handleLambdaBucket(nil, buckets)
 	if !ok && !recoverable {
-		fmt.Fprintf(handler.ErrorStream, "\nUnable to resolve automatically.\n\n")
+		fmt.Fprintf(h.ErrorStream, "\nUnable to resolve automatically.\n\n")
 		return Exit(false)
 	}
 	if !ok {
 
-		name, err := handler.createLambdaBucket()
+		name, err := h.createLambdaBucket()
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(handler.ErrorStream, "\n  %s created lambda bucket: %v\n", handler.styles.tick, name)
+		fmt.Fprintf(h.ErrorStream, "\n  %s created lambda bucket: %v\n", h.styles.tick, name)
 
 	}
 	return nil
 }
 
-func (handler *Handler) createLambdaBucket() (string, error) {
+func (h *Handler) createLambdaBucket() (string, error) {
 	name := "cdflow2-lambda-" + randHexPostfix()
-	if _, err := handler.getS3Client().CreateBucket(&s3.CreateBucketInput{
+	if _, err := h.getS3Client().CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String(name),
 	}); err != nil {
 		return "", err
@@ -206,25 +212,25 @@ func (handler *Handler) createLambdaBucket() (string, error) {
 	return name, nil
 }
 
-func (handler *Handler) checkOrCreateECRRepository(component string) error {
-	repoURI, err := handler.getECRRepository(component)
+func (h *Handler) checkOrCreateECRRepository(component string) error {
+	repoURI, err := h.getECRRepository(component)
 	if err != nil {
 		return err
 	}
 	if repoURI == "" {
-		fmt.Fprintf(handler.ErrorStream, "\n")
+		fmt.Fprintf(h.ErrorStream, "\n")
 
-		if err := handler.createECRRepository(component); err != nil {
+		if err := h.createECRRepository(component); err != nil {
 			return err
 		}
-		fmt.Fprintf(handler.ErrorStream, "\n  %s created ECR registry: %v\n", handler.styles.tick, component)
+		fmt.Fprintf(h.ErrorStream, "\n  %s created ECR registry: %v\n", h.styles.tick, component)
 
 	}
 	return nil
 }
 
-func (handler *Handler) createECRRepository(component string) error {
-	ecrClient := handler.getECRClient()
+func (h *Handler) createECRRepository(component string) error {
+	ecrClient := h.getECRClient()
 	if _, err := ecrClient.CreateRepository(&ecr.CreateRepositoryInput{
 		ImageScanningConfiguration: &ecr.ImageScanningConfiguration{
 			ScanOnPush: aws.Bool(true),

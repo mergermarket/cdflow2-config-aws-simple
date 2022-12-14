@@ -5,25 +5,34 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/sts"
 	common "github.com/mergermarket/cdflow2-config-common"
 )
 
 func (h *Handler) PrepareTerraform(request *common.PrepareTerraformRequest, response *common.PrepareTerraformResponse, releaseDir string) error {
+	team, err := h.getTeam(request.Config["team"])
+	if err != nil {
+		response.Success = false
+		fmt.Fprintln(h.ErrorStream, err)
+		return nil
+	}
+
+	response.Monitoring.Data["team"] = team
 
 	if !h.CheckInputConfiguration(request.Config, request.Env) {
 		response.Success = false
 		return nil
 	}
 
-	if !h.CheckAWSResources() {
-		response.Success = false
-		return nil
+	response.Monitoring.APIKey = h.getDatadogAPIKey()
+
+	accountID := h.getAccountID()
+	if accountID != "" {
+		response.Monitoring.Data["account_id"] = accountID
 	}
 
-	team, err := h.getTeam(request.Config["team"])
-	if err != nil {
+	if !h.CheckAWSResources() {
 		response.Success = false
-		fmt.Fprintln(h.ErrorStream, err)
 		return nil
 	}
 
@@ -104,6 +113,22 @@ func (h *Handler) AddDeployAccountCredentialsValue(request *common.PrepareTerraf
 	responseEnv["AWS_DEFAULT_REGION"] = request.Env["AWS_DEFAULT_REGION"]
 
 	return nil
+}
+
+func (h *Handler) getAccountID() string {
+	svc := sts.New(h.awsSession)
+
+	result, err := svc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	if err != nil {
+		fmt.Fprintf(h.ErrorStream, "unable to get aws caller identity: %v", err)
+		return ""
+	}
+
+	if result.Account != nil {
+		return *result.Account
+	}
+
+	return ""
 }
 
 func AddAdditionalEnvironment(requestEnv map[string]string, responseEnv map[string]string) {
