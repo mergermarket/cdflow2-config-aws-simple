@@ -68,6 +68,9 @@ func (h *Handler) ConfigureRelease(request *common.ConfigureReleaseRequest, resp
 
 				env["ECR_REPOSITORY"] = repoURI
 				env["ECR_TAG"] = fmt.Sprintf("%s-%s", buildID, request.Version)
+			} else if need == "gha" {
+				env["ACTIONS_CACHE_URL"] = request.Env["ACTIONS_CACHE_URL"]
+				env["ACTIONS_RUNTIME_TOKEN"] = request.Env["ACTIONS_RUNTIME_TOKEN"]
 			} else {
 				fmt.Fprintf(h.ErrorStream, "unable to satisfy %q need for %q build", need, buildID)
 				response.Success = false
