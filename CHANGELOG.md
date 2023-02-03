@@ -5,7 +5,7 @@
 ### Added
 
 - Add auth credentials for gha cache usage ([#6](https://github.com/mergermarket/cdflow2-config-aws-simple/pull/6))  
-  _Currently only the [cdflow2-build-docker-ecr](https://github.com/mergermarket/cdflow2-build-docker-ecr) image using this_ 
+  Currently only the [cdflow2-build-docker-ecr](https://github.com/mergermarket/cdflow2-build-docker-ecr) image using this. 
 
 ## 2022-12-14
 
