@@ -10,7 +10,7 @@ on:
 
 jobs:
   publish:
-    runs-on: [self-hosted, linux, aws]
+    runs-on: ubuntu-latest
     name: Publish docker image
     if: github.event.workflow_run.conclusion == 'success'
     steps:
