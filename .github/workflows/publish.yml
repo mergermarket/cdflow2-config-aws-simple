@@ -43,7 +43,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          platforms: linux/amr64,linux/amd64
+          platforms: linux/arm64,linux/amd64
           tags: |
             mergermarket/cdflow2-config-aws-simple:latest
             public.ecr.aws/p7e3d1i3/cdflow2-config-aws-simple:latest
